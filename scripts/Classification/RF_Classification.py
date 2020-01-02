@@ -30,8 +30,8 @@ def RF_classifier(X_df,y_df,feature_fields,target_field):
     n_tune_split = 3
     
     ## Grid Search
-    param_grid = {'n_estimators':np.arange(50,550,25),'max_leaf_nodes':np.arange(2,32,2)}
-    tuned_clf = GridSearchCV(clf, param_grid,cv=n_tune_split,n_jobs=4).fit(X_train, y_train)
+    param_grid = {'n_estimators':np.arange(25,550,25),'max_leaf_nodes':np.arange(2,42,2)}
+    tuned_clf = GridSearchCV(clf, param_grid,cv=n_tune_split,n_jobs=6).fit(X_train, y_train)
     
     tuned_max_trees, tuned_max_leaf_nodes = (tuned_clf.best_params_['n_estimators'],
                                     tuned_clf.best_params_['max_leaf_nodes'])

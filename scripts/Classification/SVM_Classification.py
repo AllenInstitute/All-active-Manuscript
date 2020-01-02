@@ -2,7 +2,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from ateamopt.utils import utility
-from ateamopt.analysis.allactive_classification import Allactive_Classification as aa_clf
+import man_opt.utils as man_utils
 import os
 import numpy as np
 import matplotlib as mpl
@@ -72,10 +72,10 @@ def SVM_classifier(X_df,y_df,feature_fields,target_field,hyp_search='random'):
         score = np.round(100*score,1)
         delta_chance = np.round(delta_chance*100,1)
         
-        best_y_pred,best_y = le.inverse_transform(y_pred_test),\
+        test_y_pred,test_y = le.inverse_transform(y_pred_test),\
                                     le.inverse_transform(y_test)
         
-        return score,df_conf_svm,delta_chance,best_y,best_y_pred
+        return score,df_conf_svm,delta_chance,test_y,test_y_pred
 
 
 data_path = os.path.join(os.getcwd(),os.pardir,os.pardir,'assets','aggregated_data')
@@ -97,16 +97,15 @@ train_ephys_max_amp_fields_fname = os.path.join(data_path,'train_ephys_max_amp_f
 
 cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
 
-clf_handler = aa_clf()
-mouse_data_df = clf_handler.read_class_data(mouse_data_filename,mouse_datatype_filename)
-morph_data = clf_handler.read_class_data(morph_data_filename,morph_datatype_filename)
-morph_fields = clf_handler.get_data_fields(morph_data)
-allensdk_data = clf_handler.read_class_data(mouse_data_filename,mouse_datatype_filename)
-allensdk_fields = clf_handler.get_data_fields(allensdk_data)
-ephys_data = clf_handler.read_class_data(train_ephys_max_amp_fname,
+mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
+morph_data = man_utils.read_csv_with_dtype(morph_data_filename,morph_datatype_filename)
+morph_fields = man_utils.get_data_fields(morph_data)
+allensdk_data = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
+allensdk_fields = man_utils.get_data_fields(allensdk_data)
+ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_fname,
                                                   train_ephys_max_amp_dtype_fname)
 ephys_fields = utility.load_json(train_ephys_max_amp_fields_fname)
-hof_param_data = clf_handler.read_class_data(param_data_filename,param_datatype_filename)
+hof_param_data = man_utils.read_csv_with_dtype(param_data_filename,param_datatype_filename)
 
 cre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Cre_line']]
 bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
@@ -135,7 +134,7 @@ cluster_data_list = [bcre_cluster,cre_cluster]
 
 svm_scores_arr = np.zeros((len(target_field_list),len(feature_field_list)))
 svm_conf_mat_grid = {}
-best_pred_record = {}
+test_pred_record = {}
 delta_chance_arr = np.zeros_like(svm_scores_arr)
 least_pop_index = 6
 
@@ -153,7 +152,7 @@ for ii,target_ in enumerate(target_field_list):
         if target_ == 'Cre_line':
             df_clf = df_clf.loc[df_clf[target_].isin(rna_seq_crelines),]
             
-        X_df,y_df,revised_features = clf_handler.prepare_data_clf\
+        X_df,y_df,revised_features = man_utils.prepare_data_clf\
             (df_clf,feature_fields,target_,
             least_pop=least_pop_index)
         
@@ -161,7 +160,7 @@ for ii,target_ in enumerate(target_field_list):
         print('Classifier Features : %s'%feature_name_list[jj])
         print('Classifier Target : %s'%target_)
         
-        score,conf_df,delta_chance,best_y,best_y_pred= SVM_classifier(X_df,\
+        score,conf_df,delta_chance,test_y,test_y_pred= SVM_classifier(X_df,\
                  y_df,revised_features,target_,hyp_search='grid')
         
         if target_ == 'Broad_Cre_line':
@@ -176,10 +175,69 @@ for ii,target_ in enumerate(target_field_list):
                                       sorted_cre_indices)
             cre_indices = [cre.split('-')[0] for cre in sorted_cre_indices]
             conf_df=pd.DataFrame(conf_df.values,index=cre_indices,columns=cre_indices)
-
+            
+            
+        print('Classifier Accuracy : %s'%score)
         svm_scores_arr[ii,jj] = score
         svm_conf_mat_grid[ii,jj] = conf_df
         delta_chance_arr[ii,jj] = delta_chance    
-        best_pred_record[ii,jj] = pd.DataFrame({'true':best_y,'predicted':best_y_pred})
+        test_pred_record[ii,jj] = pd.DataFrame({'true':test_y,'predicted':test_y_pred})
     
 print(svm_scores_arr)
+
+# Figure grid
+title_fontsize =13
+axis_fontsize = 13
+tick_fontsize = 12
+
+fig_dim_x = svm_scores_arr.shape[0]
+fig_dim_y = svm_scores_arr.shape[1]
+
+sns.set(style="whitegrid")
+cmap = sns.cubehelix_palette(as_cmap=True)
+
+fig,axes=plt.subplots(fig_dim_x,fig_dim_y,figsize =(13,6.5),sharex=False,
+                      sharey='row',squeeze=False)
+for ii in range(fig_dim_x):
+    for jj in range(fig_dim_y):
+
+        axes[ii,jj] = sns.heatmap(svm_conf_mat_grid[ii,jj],cmap=cmap,
+                vmin=0,vmax=100,cbar=False,linecolor='k',ax=axes[ii,jj])
+        xticklabels = axes[ii,jj].get_xticklabels()
+        
+        if ii == 0:
+            xticktext = xticklabels # For broad Cre-line show all x-labels
+            feature_title = feature_name_list[jj] + '\n' + '\n'
+            
+        else:
+            xticktext = [tick.get_text() if ii%2 == 0 else '' for ii,tick in \
+                     enumerate(xticklabels)] # For refined Cre-lines show only few x-labels
+            feature_title = ''
+        axes[ii,jj].set_xticklabels(xticktext,rotation=60,ha='center',
+                 fontsize=tick_fontsize)
+        plt.setp(axes[ii,jj].get_yticklabels(),rotation=0,va='center',
+                 fontsize=tick_fontsize)
+        
+        target_title = target_field_list[ii]
+        if jj == 0:
+            axes[ii,jj].set_ylabel('True Label',labelpad=15,fontsize=axis_fontsize)
+        elif jj == fig_dim_y-1:
+            axes[ii,jj].set_ylabel(target_title,labelpad=10,fontsize=axis_fontsize)
+            axes[ii,jj].yaxis.set_label_position("right")
+        prefix_title = 'Acc. : {}% '.format(svm_scores_arr[ii,jj])
+        percent_text = r'$(\Uparrow{}\%)$'.format(delta_chance_arr[ii,jj])
+        axes[ii,jj].set_title(feature_title+prefix_title+percent_text,fontsize=title_fontsize)
+        
+fig.text(0.5, -0.05, 'Predicted Label', ha='center',fontsize=axis_fontsize)
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=100))
+sm._A = []
+cax = fig.add_axes([0.4, -0.1, 0.2, .03])
+cbar = fig.colorbar(sm,orientation='horizontal',cax=cax)
+cbar.ax.set_xlabel('%-age of row',fontsize=tick_fontsize)
+cbar.outline.set_visible(False)
+
+fig.subplots_adjust(wspace=.2,hspace=.55)
+svm_figpath = 'figures/SVM_Classifier_grid.pdf'
+utility.create_filepath(svm_figpath)
+fig.savefig(svm_figpath,bbox_inches='tight')
+plt.close(fig)
