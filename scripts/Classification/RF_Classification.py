@@ -69,7 +69,7 @@ def plot_classifier_grid(scores_arr,conf_mat_grid,feature_name_list,target_name_
     cbar.ax.set_xlabel('%-age of row',fontsize=tick_fontsize)
     cbar.outline.set_visible(False)
 
-    fig.subplots_adjust(wspace=.6,hspace=.6)
+    fig.subplots_adjust(wspace=.6,hspace=.65)
     fig.savefig(figname,dpi=80,bbox_inches='tight')
     plt.close(fig)
 
@@ -287,7 +287,8 @@ for sect in unique_section_names:
 
 def unique_list(sequence):
     seen = set()
-    return [x for x in sequence if not (x in seen or seen.add(x))]
+    seen_add = seen.add
+    return [x for x in sequence if not (x in seen or seen_add(x))]
 
 channel_names = unique_list([sorted_param.split('.')[-1] for sorted_param in 
                           sorted_param_names if sorted_param.split('.')[0] in 
