@@ -1,4 +1,4 @@
-[![Generic badge](https://img.shields.io/badge/License-Allen_Institute-yellow.svg)](https://alleninstitute.org/legal/terms-use/)
+[![Generic badge](https://img.shields.io/badge/License-Allen_Institute-yellow.svg)](https://alleninstitute.org/legal/terms-use/) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/anirban6908/All-active-Manuscript/master)
 
 # All-active-Manuscript
 Codes for generating figures presented in the All-active manuscript
