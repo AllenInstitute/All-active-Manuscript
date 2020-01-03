@@ -127,6 +127,8 @@ mp_data = pd.merge(morph_data,param_data, how='left',on='Cell_id')
 
 
 target_field_list = ['Broad_Cre_line','Cre_line']
+target_name_list = ['Broad Cre-line','Cre-line']
+
 feature_field_list = [ephys_fields,me_fields,p_fields,mp_fields]
 feature_name_list = ['Ephys','Morph+Ephys','Model Parameters','Morph+Parameters']
 feature_data_list = [ephys_data,me_data,param_data,mp_data]
@@ -218,7 +220,7 @@ for ii in range(fig_dim_x):
         plt.setp(axes[ii,jj].get_yticklabels(),rotation=0,va='center',
                  fontsize=tick_fontsize)
         
-        target_title = target_field_list[ii]
+        target_title = target_name_list[ii]
         if jj == 0:
             axes[ii,jj].set_ylabel('True Label',labelpad=15,fontsize=axis_fontsize)
         elif jj == fig_dim_y-1:
@@ -231,7 +233,7 @@ for ii in range(fig_dim_x):
 fig.text(0.5, -0.05, 'Predicted Label', ha='center',fontsize=axis_fontsize)
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=100))
 sm._A = []
-cax = fig.add_axes([0.4, -0.1, 0.2, .03])
+cax = fig.add_axes([0.7, -0.05, 0.2, .03])
 cbar = fig.colorbar(sm,orientation='horizontal',cax=cax)
 cbar.ax.set_xlabel('%-age of row',fontsize=tick_fontsize)
 cbar.outline.set_visible(False)

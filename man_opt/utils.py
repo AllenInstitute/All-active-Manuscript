@@ -1,6 +1,7 @@
 import pandas as pd
 from ateamopt.utils import utility
 import numpy as np
+import re
 
 def read_csv_with_dtype(data_filename,datatype_filename):
     datatypes = pd.read_csv(datatype_filename)['types']
@@ -50,3 +51,30 @@ def prepare_data_clf(data,feature_fields,target_field,
     X_df = data_section.loc[:,revised_features + property_fields]
     y_df = data_section.loc[:,[target_field]]
     return X_df,y_df,revised_features
+
+
+def replace_channel_name(param_name_):
+    if bool(re.search('NaT',param_name_)):
+            param_name_ = 'NaT'
+    elif bool(re.search('Nap',param_name_)):
+        param_name_ = 'NaP'
+    elif bool(re.search('K_P',param_name_)):
+        param_name_ = 'KP'
+    elif bool(re.search('K_T',param_name_)):
+        param_name_ = 'KT'
+    elif bool(re.search('Kv3_1',param_name_)):
+        param_name_ = 'Kv31'
+    elif bool(re.search('gamma',param_name_)):
+        param_name_ = 'gammaCa'
+    elif bool(re.search('decay',param_name_)):
+        param_name_ = 'decayCa'
+    elif bool(re.search('Ca_LVA',param_name_)):
+        param_name_ = 'CaLV'
+    elif bool(re.search('Ca_HVA',param_name_)):
+        param_name_= 'CaHV'
+    elif bool(re.search('SK',param_name_)):
+        param_name_= 'SK'
+    elif bool(re.search('Ih',param_name_)):
+        param_name_= 'Ih'
+
+    return param_name_
