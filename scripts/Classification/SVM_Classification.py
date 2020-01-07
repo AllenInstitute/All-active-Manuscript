@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn import preprocessing
 from sklearn.metrics import confusion_matrix,accuracy_score  
-from sklearn.model_selection import StratifiedKFold,GridSearchCV,\
+from sklearn.model_selection import GridSearchCV,\
             RandomizedSearchCV,train_test_split  
 from sklearn.utils.multiclass import unique_labels
 import scipy.stats as stats     
