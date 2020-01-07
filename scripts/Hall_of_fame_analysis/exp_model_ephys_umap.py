@@ -1,5 +1,4 @@
 from umap import UMAP
-from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 import pandas as pd
@@ -9,7 +8,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.cm import ScalarMappable
 import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from man_opt.utils import silhouette_score,gap_statistic
+from man_opt.cluster_score import gap_statistic
 import man_opt.utils as man_utils
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
@@ -73,7 +72,8 @@ def draw_kmeans_decision_boundary(data_,nclusters,ax,h=5e-2):
     Z = Z.reshape(xx.shape)
     Z_rearranged = np.zeros_like(Z) 
     
-    # this part is specific to 3 clusters
+    # this part is specific to 3 clusters and the structure
+    print('Specific to the cluster structure and n_clusters = 3')
     Z_corners = [Z[0,0],Z[0,-1],Z[-1,-1]]
     for i,z_val in enumerate(Z_corners):
         Z_rearranged[Z==z_val] = i
@@ -87,18 +87,24 @@ def draw_kmeans_decision_boundary(data_,nclusters,ax,h=5e-2):
 data_path = os.path.join(os.getcwd(),os.pardir,os.pardir,'assets','aggregated_data')
 mouse_data_filename = os.path.join(data_path,'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path,'Mouse_class_datatype.csv')
-train_ephys_max_amp_fname = os.path.join(data_path,'train_ephys_max_amp.csv')
-train_ephys_max_amp_dtype_fname = os.path.join(data_path,'train_ephys_max_amp_dtype.csv')
-train_ephys_max_amp_fields_fname = os.path.join(data_path,'train_ephys_max_amp_fields.json')
+train_ephys_max_amp_filename = os.path.join(data_path,'train_ephys_max_amp.csv')
+train_ephys_max_amp_dtype_filename = os.path.join(data_path,'train_ephys_max_amp_dtype.csv')
+train_ephys_max_amp_fields_filename = os.path.join(data_path,'train_ephys_max_amp_fields.json')
+hof_model_ephys_max_amp_filename = os.path.join(data_path,'hof_model_ephys_max_amp.csv')
+hof_model_ephys_max_amp_dtype_filename = os.path.join(data_path,
+                                              'hof_model_ephys_max_amp_datatype.csv')
+
 cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
 
-ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_fname,
-                                                  train_ephys_max_amp_dtype_fname)
+ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_filename,
+                                                  train_ephys_max_amp_dtype_filename)
+model_ephys_data = man_utils.read_csv_with_dtype(hof_model_ephys_max_amp_filename,
+                                                  hof_model_ephys_max_amp_dtype_filename)
 
-cre_color_dict = utility.load_pickle('rnaseq_sorted_cre.pkl')
+cre_color_dict = utility.load_pickle(cre_coloring_filename)
 bcre_order = ['Htr3a','Sst','Pvalb','Pyr']
 bcre_dict = {'Pyr':'Rbp4-Cre_KL100','Pvalb':'Pvalb-IRES-Cre',
              'Sst':'Sst-IRES-Cre','Htr3a':'Htr3a-Cre_NO152'}
@@ -132,3 +138,58 @@ umap_ = umap_pipeline.fit(X_data) # Experimental ephys
 data_exp = pd.concat([X_df,y_df],axis=1)
 data_exp['x-umap'] = umap_.named_steps['umap'].embedding_[:,0]
 data_exp['y-umap'] = umap_.named_steps['umap'].embedding_[:,1]
+
+
+# Transform new data (Features of all hof models)
+df_tsne_model_efeat_max = pd.merge(model_ephys_data,bcre_cluster,how='left',
+                                on='Cell_id')
+mephys_X_df,mephys_y_df,revised_features = man_utils.prepare_data_clf\
+                                (df_tsne_model_efeat_max,list(model_ephys_data),
+                                 target_field,least_pop=40*least_pop_index)
+e_features = [feature_ for feature_ in revised_features \
+                         if feature_ not in ['Cell_id','hof_index']]
+
+hof_ephys_data = mephys_X_df.loc[:,e_features].values
+mephys_y_df['label_encoder']= mephys_y_df[target_field].apply(lambda x:bcre_order.index(x))
+hof_data = pd.concat([mephys_X_df,mephys_y_df],axis=1)
+
+hof_transform = umap_pipeline.transform(hof_ephys_data)
+hof_data['x-umap'] = hof_transform[:,0]
+hof_data['y-umap'] = hof_transform[:,1]
+
+title_list = ['Experiment', 'Best Model', 'Hall of Fame']
+
+sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(0,len(bcre_order)-1))
+sm.set_array([])
+figname='figures/umap_ephys.png' 
+utility.create_filepath(figname)
+axis_fontsize=10
+sns.set(style='whitegrid')
+fig,ax = plt.subplots(1,3,sharey=True,figsize=(10,4))
+ax[0].scatter(data_exp['x-umap'], data_exp['y-umap'], s= 10, c=data_exp['label_encoder'],
+            cmap=cmap)
+nclusters = gridsearch_kmeans(data_exp.loc[:,['x-umap','y-umap']].values,ax[0])
+draw_kmeans_decision_boundary(data_exp.loc[:,['x-umap','y-umap']].values,nclusters,ax[0])
+
+ax[1].scatter(hof_data.loc[hof_data.hof_index==0,'x-umap'], 
+          hof_data.loc[hof_data.hof_index==0,'y-umap'], s= 10, c=hof_data.loc[hof_data.hof_index==0,
+          'label_encoder'],cmap=cmap)
+nclusters=gridsearch_kmeans(hof_data.loc[hof_data.hof_index==0,['x-umap','y-umap']].values,ax[1])
+draw_kmeans_decision_boundary(hof_data.loc[hof_data.hof_index==0,['x-umap','y-umap']].values,
+                              nclusters,ax[1])
+ax[2].scatter(hof_data['x-umap'], hof_data['y-umap'], s= 2, c=hof_data['label_encoder'],
+            cmap=cmap)
+nclusters=gridsearch_kmeans(hof_data.loc[:,['x-umap','y-umap']].values,ax[2])
+draw_kmeans_decision_boundary(hof_data.loc[:,['x-umap','y-umap']].values,nclusters,ax[2])
+
+for jj,ax_ in enumerate(ax):
+    ax_.axis('off')
+    ax_.set_title(title_list[jj], fontsize=axis_fontsize)
+cax = fig.add_axes([0.97, 0.2, 0.01,.6])
+cbar = plt.colorbar(sm,boundaries=np.arange(len(bcre_order)+1)-0.5,cax=cax)
+cbar.set_ticks(np.arange(len(bcre_order)))
+cbar.ax.set_yticklabels(bcre_order, fontsize=axis_fontsize)    
+cbar.outline.set_visible(False)
+    
+fig.savefig(figname,bbox_inches='tight',dpi=500)
+plt.close(fig)
