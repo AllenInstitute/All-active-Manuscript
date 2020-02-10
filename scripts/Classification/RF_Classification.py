@@ -14,12 +14,16 @@ from sklearn.utils.multiclass import unique_labels
 from matplotlib import patches
 from matplotlib.colors import ListedColormap
 from matplotlib.cm import ScalarMappable
-
+import man_opt
+from collections import OrderedDict
 
 bpopt_section_names = list(utility.bpopt_section_map.values())
 title_fontsize =13
 axis_fontsize = 12
 tick_fontsize = 12
+
+
+#%% Local Functions
 
 def plot_classifier_grid(scores_arr,conf_mat_grid,feature_name_list,target_name_list,figname):
     fig_dim_x = scores_arr.shape[0]
@@ -29,7 +33,7 @@ def plot_classifier_grid(scores_arr,conf_mat_grid,feature_name_list,target_name_
 #    cmap = sns.cubehelix_palette(light=1, as_cmap=True)
     cmap = sns.cubehelix_palette(as_cmap=True)
 
-    fig,axes=plt.subplots(fig_dim_x,fig_dim_y,figsize =(16,7),sharex=False,
+    fig,axes=plt.subplots(fig_dim_x,fig_dim_y,figsize =(10,8),sharex=False,
                           sharey=False,squeeze=False)
     for ii in range(fig_dim_x):
         for jj in range(fig_dim_y):
@@ -72,6 +76,7 @@ def plot_classifier_grid(scores_arr,conf_mat_grid,feature_name_list,target_name_
     fig.subplots_adjust(wspace=.6,hspace=.65)
     fig.savefig(figname,dpi=80,bbox_inches='tight')
     plt.close(fig)
+
 
 def RF_classifier(X_df,y_df,feature_fields,target_field):
     np.random.seed(0)
@@ -138,7 +143,17 @@ def RF_classifier(X_df,y_df,feature_fields,target_field):
                             reverse=True)
     return score,df_conf_rf,delta_chance,test_y,test_y_pred,feature_imp_df,params_sorted
 
-data_path = os.path.join(os.getcwd(),os.pardir,os.pardir,'assets','aggregated_data')
+def unique_list(sequence):
+    ''' 
+    Get unique elements from the list with order preserved
+    '''
+    seen = set()
+    seen_add = seen.add
+    return [x for x in sequence if not (x in seen or seen_add(x))]
+
+#%% Get the data
+
+data_path = os.path.join(os.path.dirname(man_opt.__file__),os.pardir,'assets','aggregated_data')
 mouse_data_filename = os.path.join(data_path,'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path,'Mouse_class_datatype.csv')
 
@@ -146,9 +161,8 @@ param_data_filename = os.path.join(data_path,'allactive_params.csv')
 param_datatype_filename = os.path.join(data_path,'allactive_params_datatype.csv')
 
 me_cluster_data_filename = os.path.join(data_path,'tsne_mouse.csv')
-
-
 cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_ttype_filename = os.path.join(data_path,'cre_ttype_map.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 hof_param_data = man_utils.read_csv_with_dtype(param_data_filename,param_datatype_filename)
@@ -162,16 +176,31 @@ ephys_cluster = me_cluster_data.loc[:,['Cell_id','ephys_cluster']]
 me_cluster = me_cluster_data.loc[:,['Cell_id','me_type']]
 cre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Cre_line']]
 bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
+bcre_index_order = ['Htr3a','Sst','Pvalb','Pyr']
 
 cre_color_dict = utility.load_pickle(cre_coloring_filename)
-rna_seq_crelines = list(cre_color_dict.keys())
-all_crelines = cre_cluster.Cre_line.unique().tolist()
-cre_pal_all = {cre_:(mpl.colors.to_hex(cre_color_dict[cre_]) 
-        if cre_ in rna_seq_crelines else 
-             mpl.colors.to_hex('k')) for cre_ in all_crelines}
+cre_cluster_color_dict = OrderedDict()
+cre_type_cluster = utility.load_pickle(cre_ttype_filename)
+for cre,color in cre_color_dict.items():
+    if cre_type_cluster[cre] not in cre_cluster_color_dict.keys():
+        cre_cluster_color_dict[cre_type_cluster[cre]] = color
 
-target_field_list = ['ephys_cluster','me_type','Broad_Cre_line','Cre_line']
-target_name_list = ['E-type','ME-type','Broad Cre-line','Cre-line']
+cre_target_selection = 'clustered_cre_line' # 'clustered_cre_line','cre_line'
+if cre_target_selection == 'cre_line':
+    approved_cre_lines = list(cre_color_dict.keys())
+    all_crelines = cre_cluster.Cre_line.unique().tolist()
+
+# When the targets are Cre-lines merged from transcriptomic data and not just normal cre
+elif cre_target_selection == 'clustered_cre_line':
+    approved_cre_lines = list(cre_cluster_color_dict.keys())
+    cre_cluster['Cre_line'] = cre_cluster.Cre_line.apply(lambda x:man_utils.get_cretype_cluster(x,cre_type_cluster))
+    all_crelines = cre_cluster.Cre_line.unique().tolist()
+
+
+#%% Random Forest Classification for different features and targets
+
+target_field_list = ['Broad_Cre_line','Cre_line'] # ['ephys_cluster','me_type','Broad_Cre_line','Cre_line']
+target_name_list = ['Broad Cre-line','Cre-line'] #  ['E-type','ME-type','Broad Cre-line','Cre-line']
 pass_param_list= ['cm','e_pas', 'Ra','g_pas','gbar_Ih']
 
 p_fields = list(param_data)
@@ -180,7 +209,7 @@ other_param_list = [p_field_ for p_field_ in p_fields
 feature_field_list  = [p_fields,p_fields]
 feature_name_list = ['Passive+Ih','All parameters']
 feature_data_list = [param_data,param_data]
-cluster_data_list = [ephys_cluster,me_cluster,bcre_cluster,cre_cluster]
+cluster_data_list = [bcre_cluster,cre_cluster] # [ephys_cluster,me_cluster,bcre_cluster,cre_cluster]
 
 imp_df_list = []
 rf_scores_arr = np.zeros((len(feature_field_list),len(target_field_list)))
@@ -206,28 +235,22 @@ for jj,target_ in enumerate(target_field_list):
                         on='Cell_id')
         
         if target_ == 'Cre_line':
-            df_clf = df_clf.loc[df_clf[target_].isin(rna_seq_crelines),]
+            df_clf = df_clf.loc[df_clf[target_].isin(approved_cre_lines),]
             
         X_df,y_df,revised_features = man_utils.prepare_data_clf(df_clf,feature_fields,target_,
             least_pop=least_pop_index)
-        
-        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        print('Classifier Features : %s'%feature_name_list[ii])
-        print('Classifier Target : %s'%target_)
-        
-        
+              
         score,conf_df,delta_chance,test_y,test_y_pred,df_imp,sorted_param_imp= \
                  RF_classifier(X_df,y_df,revised_features,target_)
                  
         df_imp['Features'] = feature_name_list[ii]
         
         if target_ == 'Broad_Cre_line':
-            bcre_index_order = ['Htr3a','Sst','Pvalb','Pyr']
             conf_df = conf_df.reindex(index=bcre_index_order,columns=bcre_index_order)
             df_imp['Classifier_target'] = 'Broad Cre-line'
         elif target_ == 'Cre_line':
             cre_indices = conf_df.index
-            sorted_cre_indices = [cre_ind_ for cre_ind_ in rna_seq_crelines \
+            sorted_cre_indices = [cre_ind_ for cre_ind_ in approved_cre_lines \
                                   if cre_ind_ in cre_indices]
             conf_df = conf_df.reindex(index=sorted_cre_indices,columns=
                                       sorted_cre_indices)
@@ -239,6 +262,9 @@ for jj,target_ in enumerate(target_field_list):
         elif target_ == 'me_type':
             df_imp['Classifier_target'] = 'ME-type'
          
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        print('Classifier Features : %s'%feature_name_list[ii])
+        print('Classifier Target : %s'%target_)
         print('Classifier Accuracy : %s'%score)
         rf_scores_arr[ii,jj] = score
         rf_conf_mat_grid[ii,jj] = conf_df
@@ -249,15 +275,19 @@ for jj,target_ in enumerate(target_field_list):
 
         imp_df_list.append(df_imp)
 
+#%% Plot confusion matrix grid
+
 plot_classifier_grid(rf_scores_arr,rf_conf_mat_grid,feature_name_list,
                      target_name_list,figname='figures/RF_Classifier_grid.pdf')
+
+#%% Plot parameter importance from Random Forest
 
 feature_imp_df = pd.concat(imp_df_list,sort=False,ignore_index=True)       
     
 # Add a phantom row to the dataframe to create separation
 phantom_df = pd.DataFrame({'param_name':['cm.asphantom','cm.azphantom',\
                          'cm.bzphantom'],
-                        'Features' : ['All']*3,
+                        'Features' : ['All parameters']*3,
                         'Classifier_target':['Cre-line']*3,
                         'importance': [0]*3})
 
@@ -284,11 +314,6 @@ for sect in unique_section_names:
                 len(all_section_names)-list(reversed(all_section_names)).\
                 index(sect)-1 +.5]
 
-
-def unique_list(sequence):
-    seen = set()
-    seen_add = seen.add
-    return [x for x in sequence if not (x in seen or seen_add(x))]
 
 channel_names = unique_list([sorted_param.split('.')[-1] for sorted_param in 
                           sorted_param_names if sorted_param.split('.')[0] in 
@@ -343,17 +368,15 @@ for ii,ax in enumerate(g.axes.ravel()):
         ax.set_ylabel(ax.get_ylabel(),fontsize=axis_fontsize)
     
 fig = g.fig
-fig.set_size_inches(16,6)
-fig.subplots_adjust(wspace=0.05,hspace = 0.15)
-cax = fig.add_axes([0.15, 0.0, 0.5, .02])
-patch_ax = fig.add_axes([0.65, 0.0, 0.2, .02])
+fig.set_size_inches(20,4)
+fig.subplots_adjust(wspace=.05,hspace = 0.05)
+cax = fig.add_axes([0.3, 0.0, 0.3, .03])
+patch_ax = fig.add_axes([0.6, 0.0, 0.1, .03])
 patch_origin = 0
 patch_tickmarks,patch_ticklabels= [],[]
 for hatch_key,hatch_val in hatch_dict.items():
     patch_ax.add_patch(patches.Rectangle((patch_origin, 0),.25,1,
-                               facecolor='lightgrey',hatch=hatch_val,
-                                            edgecolor='k'))
-    
+                               facecolor='lightgrey',hatch=hatch_val,edgecolor='k'))
     patch_tickmarks.append(patch_origin+.25/2)
     patch_ticklabels.append(hatch_key)
     patch_origin += .25

@@ -28,6 +28,12 @@ def get_data_fields(data_path):
     print('Not in .json,.csv or pandas dataframe format')
     return None
 
+def get_cretype_cluster(cre_line,cre_cluster_dict):
+    if cre_line in cre_cluster_dict.keys():
+        return cre_cluster_dict[cre_line]
+    else:
+        return cre_line
+
 
 def prepare_data_clf(data,feature_fields,target_field,
                          property_fields = [],
@@ -91,3 +97,77 @@ def bounding_box(X):
     return (xmin,xmax), (ymin,ymax)
 
 
+def pval_to_sig(pval):
+    if pval < 1e-3:
+        sig = '***'
+    elif pval < 1e-2:
+        sig = '**'
+    elif pval < 5e-2:
+        sig = '*'
+    else:
+        sig = 'n.s.'
+    return sig
+
+def annotate_sig_level(var_levels,hue_levels,hue_var,sig_group,sig_group_var,
+                       plot_data,plot_data_x,plot_data_y,ax,**kwargs):
+    y_sig_dict = {}
+    for ii,var_level in enumerate(var_levels):
+        whisk_max = -np.inf
+        for hue_ in hue_levels:
+            data = plot_data.loc[(plot_data[plot_data_x] == var_level) &(plot_data[hue_var] == hue_),plot_data_y]
+            data = data.dropna(how='any',axis=0)
+            iqr = np.percentile(data,75) -np.percentile(data,25)
+            whisk_ = np.percentile(data,75)+ .75*iqr
+            whisk_max = whisk_ if whisk_ > whisk_max else whisk_max
+       
+        y_sig_dict[var_level] = whisk_max
+    y_sig_max = np.max(list(y_sig_dict.values()))
+    line_height_factor = kwargs.get('line_height_factor') or .05
+    line_offset_factor = kwargs.get('line_offset_factor') or .2
+    line_height = line_height_factor*y_sig_max
+    line_offset = line_offset_factor*y_sig_max
+    
+    comp_sign = kwargs.get('comp_sign') or '<'
+    for y_sig_key,y_sig_val in y_sig_dict.items():
+        if y_sig_val != y_sig_max:
+            y_sig_dict[y_sig_key] = y_sig_val + line_offset
+    
+    
+    plot_type = kwargs.get('plot_type') or 'dabest'
+    if plot_type == 'dabest':
+        mid_hue_index = len(hue_levels)/2.0 -.5 
+        bar_width =1
+    else:
+        mid_hue_index = len(hue_levels)/2.0
+        bar_gap = 0.1
+        bar_width = (1-2*bar_gap)/len(hue_levels)
+    for param_,group in sig_group:
+        if param_ not in var_levels:
+            continue
+        y_sig = y_sig_dict[param_]
+        x_center = len(hue_levels)*var_levels.index(param_) + mid_hue_index
+        
+        for _,row_group in group.iterrows():
+            cre_x,cre_y =row_group[sig_group_var].split(comp_sign)
+            cre_x_idx = hue_levels.index(cre_x)
+            cre_y_idx = hue_levels.index(cre_y)
+            if plot_type == 'dabest':
+                x_drift_x = abs(cre_x_idx-mid_hue_index)
+                x_drift_y = abs(cre_y_idx-mid_hue_index)
+            else:
+                x_center = var_levels.index(param_)
+                x_drift_x = abs(cre_x_idx-mid_hue_index+0.5)*bar_width
+                x_drift_y = abs(cre_y_idx-mid_hue_index+0.5)*bar_width
+            if cre_x_idx < cre_y_idx:
+                x1,x2 = x_center - x_drift_x,x_center + x_drift_y
+            else:
+                x1,x2 = x_center +x_drift_x,x_center - x_drift_y
+            
+            ax.plot([x1, x1, x2, x2], [y_sig, y_sig+line_height, y_sig+line_height, y_sig], 
+                    lw=1, c='k') 
+
+            ax.text((x1+x2)*.5, y_sig+.5*line_height, row_group['sig_level'], ha='center', 
+                    va='bottom', color='k')
+            
+            y_sig += line_height
+    return ax

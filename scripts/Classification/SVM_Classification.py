@@ -14,7 +14,11 @@ from sklearn.metrics import confusion_matrix,accuracy_score
 from sklearn.model_selection import GridSearchCV,\
             RandomizedSearchCV,train_test_split  
 from sklearn.utils.multiclass import unique_labels
-import scipy.stats as stats     
+import scipy.stats as stats   
+import man_opt  
+from collections import OrderedDict
+
+#%% Local Functions
 
 def SVM_classifier(X_df,y_df,feature_fields,target_field,hyp_search='random'):
         np.random.seed(0)
@@ -77,16 +81,14 @@ def SVM_classifier(X_df,y_df,feature_fields,target_field,hyp_search='random'):
         
         return score,df_conf_svm,delta_chance,test_y,test_y_pred
 
-
-data_path = os.path.join(os.getcwd(),os.pardir,os.pardir,'assets','aggregated_data')
+#%% Read the data
+        
+data_path = os.path.join(os.path.dirname(man_opt.__file__),os.pardir,'assets','aggregated_data')
 mouse_data_filename = os.path.join(data_path,'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path,'Mouse_class_datatype.csv')
 
 morph_data_filename = os.path.join(data_path,'morph_data.csv')
 morph_datatype_filename = os.path.join(data_path,'morph_datatype.csv')
-
-sdk_data_filename = os.path.join(data_path,'sdk.csv')
-sdk_datatype_filename = os.path.join(data_path,'sdk_datatype.csv')
 
 param_data_filename = os.path.join(data_path,'allactive_params.csv')
 param_datatype_filename = os.path.join(data_path,'allactive_params_datatype.csv')
@@ -96,26 +98,42 @@ train_ephys_max_amp_dtype_fname = os.path.join(data_path,'train_ephys_max_amp_dt
 train_ephys_max_amp_fields_fname = os.path.join(data_path,'train_ephys_max_amp_fields.json')
 
 cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_ttype_filename = os.path.join(data_path,'cre_ttype_map.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 morph_data = man_utils.read_csv_with_dtype(morph_data_filename,morph_datatype_filename)
 morph_fields = man_utils.get_data_fields(morph_data)
-allensdk_data = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
-allensdk_fields = man_utils.get_data_fields(allensdk_data)
+
 ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_fname,
                                                   train_ephys_max_amp_dtype_fname)
 ephys_fields = utility.load_json(train_ephys_max_amp_fields_fname)
 hof_param_data = man_utils.read_csv_with_dtype(param_data_filename,param_datatype_filename)
 
+cre_color_dict = utility.load_pickle(cre_coloring_filename)
+cre_cluster_color_dict = OrderedDict()
+cre_type_cluster = utility.load_pickle(cre_ttype_filename)
+for cre,color in cre_color_dict.items():
+    if cre_type_cluster[cre] not in cre_cluster_color_dict.keys():
+        cre_cluster_color_dict[cre_type_cluster[cre]] = color
+
 cre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Cre_line']]
 bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
+bcre_index_order = ['Htr3a','Sst','Pvalb','Pyr']
+bcre_dict = {'Pyr':'Rbp4-Cre_KL100','Pvalb':'Pvalb-IRES-Cre',
+                 'Sst':'Sst-IRES-Cre','Htr3a':'Htr3a-Cre_NO152'} # Used Rbp4 for Pyr just to denote the red color
 
-cre_color_dict = utility.load_pickle(cre_coloring_filename)
-rna_seq_crelines = list(cre_color_dict.keys())
-all_crelines = cre_cluster.Cre_line.unique().tolist()
-cre_pal_all = {cre_:(mpl.colors.to_hex(cre_color_dict[cre_]) 
-        if cre_ in rna_seq_crelines else 
-             mpl.colors.to_hex('k')) for cre_ in all_crelines}
+cre_target_selection = 'clustered_cre_line' # 'clustered_cre_line','cre_line'
+
+if cre_target_selection == 'cre_line':
+    approved_cre_lines = list(cre_color_dict.keys())
+    all_crelines = cre_cluster.Cre_line.unique().tolist()
+
+# When the targets are Cre-lines merged from transcriptomic data and not just normal cre
+elif cre_target_selection == 'clustered_cre_line':
+    approved_cre_lines = list(cre_cluster_color_dict.keys())
+    cre_cluster['Cre_line'] = cre_cluster.Cre_line.apply(lambda x:man_utils.get_cretype_cluster(x,cre_type_cluster))
+    all_crelines = cre_cluster.Cre_line.unique().tolist()
+
 
 me_fields= ephys_fields + morph_fields
 me_data = pd.merge(ephys_data,morph_data, how='left',on='Cell_id')
@@ -134,6 +152,8 @@ feature_name_list = ['Ephys','Morph+Ephys','Model Parameters','Morph+Parameters'
 feature_data_list = [ephys_data,me_data,param_data,mp_data]
 cluster_data_list = [bcre_cluster,cre_cluster]
 
+#%% Run SVM classifier
+
 svm_scores_arr = np.zeros((len(target_field_list),len(feature_field_list)))
 svm_conf_mat_grid = {}
 test_pred_record = {}
@@ -143,8 +163,7 @@ least_pop_index = 6
 for ii,target_ in enumerate(target_field_list):
     for jj,feature_ in enumerate(feature_field_list):
         
-        feature_fields = [feature_field_ for feature_field_ in feature_ \
-                  if feature_field_ != 'Cell_id']
+        feature_fields = [feature_field_ for feature_field_ in feature_ if feature_field_ != 'Cell_id']
         
         feature_data = feature_data_list[jj]
         cluster_data = cluster_data_list[ii]
@@ -152,33 +171,28 @@ for ii,target_ in enumerate(target_field_list):
                         on='Cell_id')
         
         if target_ == 'Cre_line':
-            df_clf = df_clf.loc[df_clf[target_].isin(rna_seq_crelines),]
+            df_clf = df_clf.loc[df_clf[target_].isin(approved_cre_lines),]
             
-        X_df,y_df,revised_features = man_utils.prepare_data_clf\
-            (df_clf,feature_fields,target_,
+        X_df,y_df,revised_features = man_utils.prepare_data_clf(df_clf,feature_fields,target_,
             least_pop=least_pop_index)
         
-        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        print('Classifier Features : %s'%feature_name_list[jj])
-        print('Classifier Target : %s'%target_)
-        
-        score,conf_df,delta_chance,test_y,test_y_pred= SVM_classifier(X_df,\
-                 y_df,revised_features,target_,hyp_search='grid')
+        score,conf_df,delta_chance,test_y,test_y_pred= SVM_classifier(X_df,y_df,revised_features,target_,hyp_search='grid')
         
         if target_ == 'Broad_Cre_line':
-            bcre_index_order = ['Htr3a','Sst','Pvalb','Pyr']
             conf_df = conf_df.reindex(index=bcre_index_order,columns=bcre_index_order)
 
         elif target_ == 'Cre_line':
             cre_indices = conf_df.index
-            sorted_cre_indices = [cre_ind_ for cre_ind_ in rna_seq_crelines \
-                                  if cre_ind_ in cre_indices]
+            sorted_cre_indices = [cre_ind_ for cre_ind_ in approved_cre_lines if cre_ind_ in cre_indices]
             conf_df = conf_df.reindex(index=sorted_cre_indices,columns=
                                       sorted_cre_indices)
             cre_indices = [cre.split('-')[0] for cre in sorted_cre_indices]
             conf_df=pd.DataFrame(conf_df.values,index=cre_indices,columns=cre_indices)
             
-            
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        print('Classifier Features : %s'%feature_name_list[jj])
+        print('Classifier Target : %s'%target_)
+        print('# of Features : %s'%X_df.shape[1])    
         print('Classifier Accuracy : %s'%score)
         svm_scores_arr[ii,jj] = score
         svm_conf_mat_grid[ii,jj] = conf_df
@@ -187,7 +201,8 @@ for ii,target_ in enumerate(target_field_list):
     
 print(svm_scores_arr)
 
-# Figure grid
+#%% Plot the confustion matrix grid
+
 title_fontsize =13
 axis_fontsize = 13
 tick_fontsize = 12
