@@ -207,14 +207,13 @@ title_fontsize =13
 axis_fontsize = 13
 tick_fontsize = 12
 
-fig_dim_x = svm_scores_arr.shape[0]
-fig_dim_y = svm_scores_arr.shape[1]
+fig_dim_x, fig_dim_y = svm_scores_arr.shape
 
 sns.set(style="whitegrid")
 cmap = sns.cubehelix_palette(as_cmap=True)
 
 fig,axes=plt.subplots(fig_dim_x,fig_dim_y,figsize =(13,6.5),sharex=False,
-                      sharey='row',squeeze=False)
+                      sharey=False,squeeze=False)
 for ii in range(fig_dim_x):
     for jj in range(fig_dim_y):
 
@@ -232,15 +231,20 @@ for ii in range(fig_dim_x):
             feature_title = ''
         axes[ii,jj].set_xticklabels(xticktext,rotation=60,ha='center',
                  fontsize=tick_fontsize)
-        plt.setp(axes[ii,jj].get_yticklabels(),rotation=0,va='center',
-                 fontsize=tick_fontsize)
+        
         
         target_title = target_name_list[ii]
         if jj == 0:
             axes[ii,jj].set_ylabel('True Label',labelpad=15,fontsize=axis_fontsize)
+            plt.setp(axes[ii,jj].get_yticklabels(),rotation=0,va='center',
+                 fontsize=tick_fontsize)
         elif jj == fig_dim_y-1:
             axes[ii,jj].set_ylabel(target_title,labelpad=10,fontsize=axis_fontsize)
             axes[ii,jj].yaxis.set_label_position("right")
+        
+        if jj != 0:
+            axes[ii,jj].set_yticklabels([])
+        
         prefix_title = 'Acc. : {}% '.format(svm_scores_arr[ii,jj])
         percent_text = r'$(\Uparrow{}\%)$'.format(delta_chance_arr[ii,jj])
         axes[ii,jj].set_title(feature_title+prefix_title+percent_text,fontsize=title_fontsize)
