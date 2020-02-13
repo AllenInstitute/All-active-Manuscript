@@ -11,8 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn import preprocessing
 from sklearn.metrics import confusion_matrix,accuracy_score  
-from sklearn.model_selection import GridSearchCV,\
-            RandomizedSearchCV,train_test_split  
+from sklearn.model_selection import GridSearchCV,RandomizedSearchCV,train_test_split  
 from sklearn.utils.multiclass import unique_labels
 import scipy.stats as stats   
 import man_opt  
@@ -76,8 +75,7 @@ def SVM_classifier(X_df,y_df,feature_fields,target_field,hyp_search='random'):
         score = np.round(100*score,1)
         delta_chance = np.round(delta_chance*100,1)
         
-        test_y_pred,test_y = le.inverse_transform(y_pred_test),\
-                                    le.inverse_transform(y_test)
+        test_y_pred,test_y = le.inverse_transform(y_pred_test),le.inverse_transform(y_test)
         
         return score,df_conf_svm,delta_chance,test_y,test_y_pred
 
@@ -102,6 +100,9 @@ cre_ttype_filename = os.path.join(data_path,'cre_ttype_map.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 morph_data = man_utils.read_csv_with_dtype(morph_data_filename,morph_datatype_filename)
+# morph_data = morph_data.loc[:,[morph_feature for morph_feature in morph_data.columns 
+#     if not any(sec in morph_feature for sec in['apical','axon'])]]
+
 morph_fields = man_utils.get_data_fields(morph_data)
 
 ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_fname,
@@ -136,12 +137,12 @@ elif cre_target_selection == 'clustered_cre_line':
 
 
 me_fields= ephys_fields + morph_fields
-me_data = pd.merge(ephys_data,morph_data, how='left',on='Cell_id')
+me_data = pd.merge(ephys_data,morph_data, on='Cell_id')
 param_data = hof_param_data.loc[hof_param_data.hof_index == 0,]
 param_data = param_data.drop(labels='hof_index',axis=1)
 p_fields = list(param_data)
 mp_fields= morph_fields+p_fields
-mp_data = pd.merge(morph_data,param_data, how='left',on='Cell_id')
+mp_data = pd.merge(morph_data,param_data,on='Cell_id')
 
 
 target_field_list = ['Broad_Cre_line','Cre_line']
