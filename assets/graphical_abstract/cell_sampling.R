@@ -6,8 +6,8 @@ library(webr)
 
 # Setting working directory -----------------------------------------------
 
-# this.dir <- dirname(parent.frame(2)$ofile)
-# setwd(this.dir)
+this.dir <- dirname(parent.frame(2)$ofile)
+setwd(this.dir)
 
 
 # Data paths --------------------------------------------------------------
@@ -28,5 +28,6 @@ PieDonut(mouse_data,aes(pies=Cell_type,donuts=Cre_line),
          r0 = 0.18,r1=.45,r2=.6,
          showRatioThreshold = .03,
          labelposition=1,
+         pieLabelSize =4,
          donutLabelSize = 4)
 

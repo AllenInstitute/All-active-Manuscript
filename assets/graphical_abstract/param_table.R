@@ -3,8 +3,9 @@ library(formattable)
 library(docxtractr)
 library(DT)
 library(kableExtra)
+library(webshot)
+library(htmlwidgets)
 
-options(DT.options = list(pageLength = 20))
 
 
 # Setting working directory -----------------------------------------------
@@ -22,17 +23,19 @@ param_df <- param_df %>% select(-c(Modfile,Unit))
 
 # Formatting options ------------------------------------------------------
 html_tag <- "td"
-apical_format <- formatter(html_tag, style = x ~ style("background-color:lightpink"))
+apical_format <- formatter(html_tag, style = x ~ formattable::style("background-color:lightpink"))
 presence_formatter <- formatter(
   "span",
-  style=x ~ style(color = ifelse(x == '-' , "red", "green")),
+  style=x ~ formattable::style(color = ifelse(x == '-' , "red", "green")),
   x~icontext(ifelse(x == '-', "remove", "ok")))
+fontsize_formatter<- formatter(
+  "span",style = x ~ formattable::style("font-size:18px;"))
 
 # Draw the table ----------------------------------------------------------
 
 t <- formattable(param_df,
        align =c("l",rep('c', ncol(param_df)-1)),
-       list(
+       list('Parameters' = fontsize_formatter,
          'Apical' = presence_formatter,
          'Basal' = presence_formatter,
          'Soma' = presence_formatter,
@@ -41,6 +44,9 @@ t <- formattable(param_df,
 
 
 # Using the DT package ----------------------------------------------------
+
+options(DT.options = list(pageLength = 20))
+
 
 t_DT <- datatable(param_df) %>% formatStyle(
   'Apical',
@@ -55,6 +61,10 @@ t_kable <- kable(param_df,table.attr = "style = \"color: black;\"") %>%
   kable_styling(full_width = F) %>%
   column_spec(2, background = "lightpink") %>%
   column_spec(c(1, 3:ncol(param_df)),background = 'white')
+
+
+# Render table ------------------------------------------------------------
+
 
 print(t)
 

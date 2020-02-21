@@ -10,8 +10,8 @@ setwd(this.dir)
 
 # Export formattable table ------------------------------------------------
 
-library("htmltools")
-library("webshot")    
+library(htmltools)
+library(webshot)    
 
 # This function is taken from https://github.com/renkun-ken/formattable/issues/26
 
@@ -60,7 +60,7 @@ t <- formattable(channel_gene_table,
                   'Kcna1-3,6' = presence_formatter,
                   'Hcn1-3' = presence_formatter)
                 )
-
-#export_formattable(t,"channel_gene_relation.png")
+print(t)
+export_formattable(t,"channel_gene_relation.pdf")
 
 

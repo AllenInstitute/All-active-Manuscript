@@ -10,29 +10,19 @@ this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 
 library(reticulate)
-use_condaenv('anaconda3')
-source_python('pickle_reader_for_R.py')
-
+use_condaenv('ateam_opt')
+   
 
 # Utility Functions -------------------------------------------------------
-
-bcre_color_list = list(Htr3a=rgb(0.0, 0.9581803921568628, 0.0),
-                       Sst=rgb(0.0, 0.6457745098039216, 0.365990196078432),
-                       Pvalb=rgb(0.0, 0.6444666666666666, 0.7333666666666667),
-                       Pyr=rgb(0.8431588235294118, 0.0, 0.0))
+  
+source_python('pickle_reader_for_R.py')
+data_path <- file.path(getwd(),'..','..','assets','aggregated_data')
+bcre_color_file <- file.path(data_path,'bcre_color_tasic16.pkl')
+bcre_color_list <- read_pickle_file(bcre_color_file) 
 
 get_bcre_color <- function(bcre){
-  if (bcre == 'Pyr'){
-    return(bcre_color_list$Pyr)
-  }
-  else if (bcre == 'Htr3a'){
-    return(bcre_color_list$Htr3a)
-  }
-  else if (bcre == 'Sst'){
-    return(bcre_color_list$Sst)
-  }
-  else if (bcre == 'Pvalb'){
-    return(bcre_color_list$Pvalb)
+  if (bcre %in% names(bcre_color_list)){
+    return(bcre_color_list[[bcre]])
   }
   else return(rgb(0,0,0))
 }
@@ -94,12 +84,12 @@ mp_data_cleaned <- mp_data_cleaned %>% remove_rownames %>% column_to_rownames(va
 d1_colors <- e_data_cleaned$bcre_colors
 d1 <- e_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
     dist() %>% hclust( method="ward.D" ) %>% as.dendrogram() 
-d1 <- d1 %>% collapse_branch(tol=100) %>% ladderize %>% 
-  set('labels_cex', c(1,rep(.01,5))) 
+d1 <- d1 %>% collapse_branch(tol=20) %>% ladderize %>% 
+  set('labels_cex', c(1.2,rep(.01,5))) 
 par(mar=c(7,5,1,1))
 plot(d1, main = 'Ephys',axes=FALSE)
 colored_bars(colors = d1_colors, dend = d1, rowLabels = "Broad Cre-line")
-legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =1, cex =1, bty = 'n',
+legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 'n',
        title = "Broad Cre-line", inset=c(0.02,0.05),
        col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
                bcre_color_list$Pyr))
@@ -109,11 +99,11 @@ d3_colors <- me_data_cleaned$bcre_colors
 d3 <- me_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
   dist() %>% hclust( method="ward.D" ) %>% as.dendrogram()
 d3 <- d3 %>% collapse_branch(tol=2000) %>% ladderize %>% 
-  set('labels_cex', c(1,rep(.01,5))) 
+  set('labels_cex', c(1.2,rep(.01,10))) 
 par(mar=c(7,5,1,1))
 plot(d3,main='Morph + Ephys Parameters',axes=FALSE)
 colored_bars(colors = d3_colors, dend = d3, rowLabels = "Broad Cre-line")
-legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =1, cex =1, bty = 'n',
+legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 'n',
        title = "Broad Cre-line", inset=c(0.05,.1),
        col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
                bcre_color_list$Pyr))
@@ -123,11 +113,11 @@ d2_colors <- mp_data_cleaned$bcre_colors
 d2 <- mp_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
    dist() %>% hclust( method="ward.D" ) %>% as.dendrogram()
 d2 <- d2 %>% collapse_branch(tol=2000) %>% ladderize %>% 
-  set('labels_cex', c(1,rep(.01,5))) 
+  set('labels_cex', c(1.2,rep(.01,10))) 
 par(mar=c(7,5,1,1))
 plot(d2,main='Morph + Model Parameters',axes=FALSE)
 colored_bars(colors = d2_colors, dend = d2, rowLabels = "Broad Cre-line")
-legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =1, cex =1, bty = 'n',
+legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 'n',
        title = "Broad Cre-line", inset=c(0.05,.1),
        col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
                bcre_color_list$Pyr))
@@ -140,11 +130,11 @@ dl <- dendlist(d3,d2)
 
 # Plot them together
 dl %>%  tanglegram(highlight_distinct_edges = FALSE, # Turn-off dashed lines
-           common_subtrees_color_branches = TRUE, # Color common branches
-           common_subtrees_color_lines = TRUE,
+           common_subtrees_color_branches = FALSE, # Color common branches
+           common_subtrees_color_lines = FALSE,
            highlight_branches_lwd = FALSE,
            # main_left = 'Ephys',
            main_left = 'Morph + Ephys',
            main_right = 'Morph + Parameters',
-           margin_inner=5)
+           margin_inner=8.5,cex_main = 1.5)
 
