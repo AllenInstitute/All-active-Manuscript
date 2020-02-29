@@ -5,7 +5,6 @@ from ateamopt.utils import utility
 import man_opt.utils as man_utils
 import os
 import numpy as np
-import matplotlib as mpl
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
@@ -63,8 +62,7 @@ def SVM_classifier(X_df,y_df,feature_fields,target_field,hyp_search='random'):
         score = accuracy_score(y_test, y_pred_test)
         chance_score = accuracy_score(y_test, y_pred_chance)
         
-        classes = le.inverse_transform(unique_labels(y_test, \
-                                        y_pred_test))
+        classes = le.inverse_transform(unique_labels(y_test,y_pred_test))
         
         df_conf_svm = pd.DataFrame(confusion_matrix_svm, classes,
               classes)
@@ -95,8 +93,12 @@ train_ephys_max_amp_fname = os.path.join(data_path,'train_ephys_max_amp.csv')
 train_ephys_max_amp_dtype_fname = os.path.join(data_path,'train_ephys_max_amp_dtype.csv')
 train_ephys_max_amp_fields_fname = os.path.join(data_path,'train_ephys_max_amp_fields.json')
 
-cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_coloring_filename = os.path.join(data_path,'cre_color_tasic16.pkl')
+bcre_coloring_filename = os.path.join(data_path,'bcre_color_tasic16.pkl')
 cre_ttype_filename = os.path.join(data_path,'cre_ttype_map.pkl')
+
+filtered_me_inh_cells_filename = os.path.join(data_path,'filtered_me_inh_cells.pkl')
+filtered_me_exc_cells_filename = os.path.join(data_path,'filtered_me_exc_cells.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 morph_data = man_utils.read_csv_with_dtype(morph_data_filename,morph_datatype_filename)
@@ -111,30 +113,56 @@ ephys_fields = utility.load_json(train_ephys_max_amp_fields_fname)
 hof_param_data = man_utils.read_csv_with_dtype(param_data_filename,param_datatype_filename)
 
 cre_color_dict = utility.load_pickle(cre_coloring_filename)
+bcre_color_dict = utility.load_pickle(bcre_coloring_filename)
+bcre_index_order = list(bcre_color_dict.keys())
+
+filtered_me_inh_cells = utility.load_pickle(filtered_me_inh_cells_filename)
+filtered_me_exc_cells = utility.load_pickle(filtered_me_exc_cells_filename)
+
+
 cre_cluster_color_dict = OrderedDict()
 cre_type_cluster = utility.load_pickle(cre_ttype_filename)
 for cre,color in cre_color_dict.items():
     if cre_type_cluster[cre] not in cre_cluster_color_dict.keys():
         cre_cluster_color_dict[cre_type_cluster[cre]] = color
 
-cre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Cre_line']]
-bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
-bcre_index_order = ['Htr3a','Sst','Pvalb','Pyr']
-bcre_dict = {'Pyr':'Rbp4-Cre_KL100','Pvalb':'Pvalb-IRES-Cre',
-                 'Sst':'Sst-IRES-Cre','Htr3a':'Htr3a-Cre_NO152'} # Used Rbp4 for Pyr just to denote the red color
+#%% Filtering
 
-cre_target_selection = 'clustered_cre_line' # 'clustered_cre_line','cre_line'
+mouse_data_df = mouse_data_df.loc[mouse_data_df.hof_index==0,]
+
+# Only keep 'Pyr' lines that are spiny
+mouse_data_df = mouse_data_df.loc[~((mouse_data_df.Broad_Cre_line == 'Pyr') & (mouse_data_df.Dendrite_type == 'aspiny')),]        
+
+# Filter inhibitory cells
+inh_lines = ["Htr3a-Cre_NO152","Sst-IRES-Cre","Pvalb-IRES-Cre"]
+mouse_data_df = mouse_data_df.loc[~((mouse_data_df.Cre_line.isin(inh_lines)) & (~mouse_data_df.Cell_id.isin(filtered_me_inh_cells)))]
+
+# Filter exc cells
+exc_lines = ["Nr5a1-Cre","Rbp4-Cre_KL100"]
+mouse_data_df = mouse_data_df.loc[~((mouse_data_df.Cre_line.isin(exc_lines)) & (~mouse_data_df.Cell_id.isin(filtered_me_exc_cells)))]
+
+#%% Feature and target specifications
+
+cre_cluster = mouse_data_df.loc[:,['Cell_id','Cre_line']].reset_index(drop = True)
+bcre_cluster = mouse_data_df.loc[:,['Cell_id','Broad_Cre_line']].reset_index(drop=True)
+
+
+cre_target_selection = 'cre_line' # 'clustered_cre_line','cre_line'
 
 if cre_target_selection == 'cre_line':
-    approved_cre_lines = list(cre_color_dict.keys())
-    all_crelines = cre_cluster.Cre_line.unique().tolist()
+#    approved_cre_lines = list(cre_color_dict.keys())
+    approved_cre_lines = ['Ndnf-IRES2-dgCre','Htr3a-Cre_NO152','Sst-IRES-Cre',
+                          'Pvalb-IRES-Cre','Nr5a1-Cre', 'Rbp4-Cre_KL100']
+    
 
 # When the targets are Cre-lines merged from transcriptomic data and not just normal cre
 elif cre_target_selection == 'clustered_cre_line':
     approved_cre_lines = list(cre_cluster_color_dict.keys())
     cre_cluster['Cre_line'] = cre_cluster.Cre_line.apply(lambda x:man_utils.get_cretype_cluster(x,cre_type_cluster))
-    all_crelines = cre_cluster.Cre_line.unique().tolist()
+    
+all_crelines = cre_cluster.Cre_line.unique().tolist()
 
+#%% Feature collection
 
 me_fields= ephys_fields + morph_fields
 me_data = pd.merge(ephys_data,morph_data, on='Cell_id')
@@ -146,7 +174,7 @@ mp_data = pd.merge(morph_data,param_data,on='Cell_id')
 
 
 target_field_list = ['Broad_Cre_line','Cre_line']
-target_name_list = ['Broad Cre-line','Cre-line']
+target_name_list = ['Broad Class','Refined Class']
 
 feature_field_list = [ephys_fields,me_fields,p_fields,mp_fields]
 feature_name_list = ['Ephys','Morph+Ephys','Model Parameters','Morph+Parameters']
@@ -159,7 +187,7 @@ svm_scores_arr = np.zeros((len(target_field_list),len(feature_field_list)))
 svm_conf_mat_grid = {}
 test_pred_record = {}
 delta_chance_arr = np.zeros_like(svm_scores_arr)
-least_pop_index = 6
+least_pop_index = 10
 
 for ii,target_ in enumerate(target_field_list):
     for jj,feature_ in enumerate(feature_field_list):
@@ -211,7 +239,8 @@ tick_fontsize = 12
 fig_dim_x, fig_dim_y = svm_scores_arr.shape
 
 sns.set(style="whitegrid")
-cmap = sns.cubehelix_palette(as_cmap=True)
+#cmap = sns.cubehelix_palette(as_cmap=True)
+cmap = 'viridis'
 
 fig,axes=plt.subplots(fig_dim_x,fig_dim_y,figsize =(13,6.5),sharex=False,
                       sharey=False,squeeze=False)
@@ -227,8 +256,7 @@ for ii in range(fig_dim_x):
             feature_title = feature_name_list[jj] + '\n' + '\n'
             
         else:
-            xticktext = [tick.get_text() if ii%2 == 0 else '' for ii,tick in \
-                     enumerate(xticklabels)] # For refined Cre-lines show only few x-labels
+            xticktext = [tick.get_text() if ii%2 == 0 else '' for ii,tick in enumerate(xticklabels)] # For refined Cre-lines show only few x-labels
             feature_title = ''
         axes[ii,jj].set_xticklabels(xticktext,rotation=60,ha='center',
                  fontsize=tick_fontsize)

@@ -27,7 +27,14 @@ get_bcre_color <- function(bcre){
   else return(rgb(0,0,0))
 }
 
+filtered_inh_cells_file <- file.path(data_path,'filtered_me_inh_cells.pkl')
+filtered_inh_cells <- read_pickle_file(filtered_inh_cells_file)
+
+filtered_exc_cells_file <- file.path(data_path,'filtered_me_exc_cells.pkl')
+filtered_exc_cells <- read_pickle_file(filtered_exc_cells_file)
+
 # Data paths --------------------------------------------------------------
+
 project_path <- file.path(getwd(),'..','..','assets','aggregated_data')
 mouse_data_filename <- file.path(project_path, 'Mouse_class_data.csv')
 param_data_filename <- file.path(project_path,'allactive_params.csv')
@@ -40,6 +47,18 @@ morph_data_filename <- file.path(project_path,'morph_data.csv')
 mouse_data <- read_csv(mouse_data_filename,col_types = cols(Cell_id = col_character(),
                                                 Cre_line = col_character(), 
                                                 Broad_Cre_line = col_character()))
+mouse_data <- mouse_data %>% filter(hof_index == 0)
+  
+# Filter cells
+inh_lines <- c("Htr3a-Cre_NO152","Sst-IRES-Cre","Pvalb-IRES-Cre")
+exc_lines <- c("Nr5a1-Cre","Rbp4-Cre_KL100")
+
+mouse_data <- mouse_data %>% filter(!((Cre_line %in% inh_lines) & !(Cell_id %in% filtered_inh_cells)))
+mouse_data <- mouse_data %>% filter(!((Cre_line %in% exc_lines) & !(Cell_id %in% filtered_exc_cells)))
+mouse_data <- mouse_data %>% filter(!((Broad_Cre_line == 'Pyr') & (Dendrite_type == 'aspiny')))
+
+
+
 ephys_data <- read_csv(train_ephys_max_amp_filename,col_types = cols(Cell_id = col_character()))
 ephys_fields <- fromJSON(ephys_fields_filename)
 morph_data <- read_csv(morph_data_filename,col_types = cols(Cell_id = col_character()))
@@ -47,8 +66,8 @@ hof_param_data <- read_csv(param_data_filename,col_types = cols(Cell_id = col_ch
                                                              hof_index = col_integer()))
 best_param_data <- hof_param_data %>% filter(hof_index == 0) %>% select(-hof_index)
 
-cre_cluster <- mouse_data %>% filter(hof_index == 0) %>% select(c('Cell_id','Cre_line'))
-bcre_cluster <- mouse_data %>% filter(hof_index == 0) %>% select(c('Cell_id','Broad_Cre_line'))
+cre_cluster <- mouse_data %>% select(c('Cell_id','Cre_line'))
+bcre_cluster <- mouse_data  %>% select(c('Cell_id','Broad_Cre_line'))
 bcre_cluster$Broad_Cre_line <- bcre_cluster$Broad_Cre_line %>% replace_na('Other')
 
 bcre_index_order <- c('Htr3a','Sst','Pvalb','Pyr')
@@ -80,12 +99,15 @@ mp_data_cleaned <- mp_data_cleaned %>% remove_rownames %>% column_to_rownames(va
 
 # Unsupervised Clustering - Dendrogram ------------------------------------
 
-# Experimental data : Ephys
+# Experimental data: Ephys ------------------------------------------------
+
 d1_colors <- e_data_cleaned$bcre_colors
 d1 <- e_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
     dist() %>% hclust( method="ward.D" ) %>% as.dendrogram() 
-d1 <- d1 %>% collapse_branch(tol=20) %>% ladderize %>% 
-  set('labels_cex', c(1.2,rep(.01,5))) 
+d1 <- d1 %>% 
+  #collapse_branch(tol=20) %>% 
+  ladderize %>% 
+  set('labels_cex', c(1,rep(.01,10))) 
 par(mar=c(7,5,1,1))
 plot(d1, main = 'Ephys',axes=FALSE)
 colored_bars(colors = d1_colors, dend = d1, rowLabels = "Broad Cre-line")
@@ -94,12 +116,18 @@ legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 
        col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
                bcre_color_list$Pyr))
 
-# Experimental data : Ephys + Morph
+
+
+# Experimental data: Ephys + Morph ----------------------------------------
+
 d3_colors <- me_data_cleaned$bcre_colors
 d3 <- me_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
   dist() %>% hclust( method="ward.D" ) %>% as.dendrogram()
-d3 <- d3 %>% collapse_branch(tol=2000) %>% ladderize %>% 
-  set('labels_cex', c(1.2,rep(.01,10))) 
+d3 <- d3 %>% 
+  #collapse_branch(tol=2000) %>% 
+  ladderize %>% 
+  #set("labels", "")
+  set('labels_cex', c(1,rep(.01,10))) 
 par(mar=c(7,5,1,1))
 plot(d3,main='Morph + Ephys Parameters',axes=FALSE)
 colored_bars(colors = d3_colors, dend = d3, rowLabels = "Broad Cre-line")
@@ -108,12 +136,16 @@ legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 
        col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
                bcre_color_list$Pyr))
 
-# Model parameters + Morph
+# Model parameters + Morph ------------------------------------------------
+
 d2_colors <- mp_data_cleaned$bcre_colors
 d2 <- mp_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
    dist() %>% hclust( method="ward.D" ) %>% as.dendrogram()
-d2 <- d2 %>% collapse_branch(tol=2000) %>% ladderize %>% 
-  set('labels_cex', c(1.2,rep(.01,10))) 
+d2 <- d2 %>% 
+  #collapse_branch(tol=2000) %>%
+  ladderize %>% 
+  #set("labels", "")
+  set('labels_cex', c(1,rep(.01,10))) 
 par(mar=c(7,5,1,1))
 plot(d2,main='Morph + Model Parameters',axes=FALSE)
 colored_bars(colors = d2_colors, dend = d2, rowLabels = "Broad Cre-line")
@@ -136,5 +168,5 @@ dl %>%  tanglegram(highlight_distinct_edges = FALSE, # Turn-off dashed lines
            # main_left = 'Ephys',
            main_left = 'Morph + Ephys',
            main_right = 'Morph + Parameters',
-           margin_inner=8.5,cex_main = 1.5)
+           margin_inner=8,cex_main = 1.5)
 

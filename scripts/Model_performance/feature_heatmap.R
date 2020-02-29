@@ -5,7 +5,7 @@ library(circlize)
 library(colorspace)
 
 # Setting working directory -----------------------------------------------
-
+  
 this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 
@@ -34,10 +34,12 @@ model_performance_data <- model_performance_data %>% select(c(ordered_features,c
 
 
 # Plot heatmap ------------------------------------------------------------
-
+spiny_color <- '#619cffcc'
+sparsely_spiny_color <- '#00ba38cc'
+aspiny_color <- '#f8766dcc'
 
 ha = HeatmapAnnotation(df = data.frame(model_performance_data %>% select(dendrite_type)),
-                 col = list(dendrite_type = c("spiny" =  "red2","sparsely spiny" = 'royalblue', "aspiny" = "mediumseagreen")),
+                 col = list(dendrite_type = c("spiny" =  spiny_color,"sparsely spiny" = sparsely_spiny_color, "aspiny" = aspiny_color)),
                  annotation_name_gp = gpar(fontsize = 11))
 perf_df <- model_performance_data[,which(sapply(model_performance_data,is.numeric))]
 perf_matrix <- data.frame(t(as.matrix(perf_df)))

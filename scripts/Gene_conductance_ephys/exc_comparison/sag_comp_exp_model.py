@@ -9,11 +9,12 @@ import dabest
 import man_opt
 import os
 import man_opt.utils as man_utils
+import matplotlib as mpl
 
 
 # Data paths
 data_path = os.path.join(os.path.dirname(man_opt.__file__),os.pardir,'assets','aggregated_data')
-cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_coloring_filename = os.path.join(data_path,'cre_color_tasic16.pkl')
 sag_features_exp_filename = os.path.join(data_path,'sag_data_exp.csv')
 sag_features_model_filename = os.path.join(data_path,'sag_data_model.csv')
 filtered_me_exc_cell_list_path = os.path.join(data_path,'filtered_me_exc_cells.pkl')
@@ -24,12 +25,13 @@ perturbed_Rbp4like_feature_file = os.path.join(data_path,'sag_data_perturbed_Rbp
 # Read the data
 exc_lines = ["Nr5a1-Cre","Rbp4-Cre_KL100"]
 cre_color_dict = utility.load_pickle(cre_coloring_filename)
+cre_color_dict["Rbp4-Cre_KL100"] = mpl.colors.to_rgb('#008033') # Only for better contrast
 filtered_me_exc_cells = utility.load_pickle(filtered_me_exc_cell_list_path)
 
 # All experiment
 sag_features_exp = pd.read_csv(sag_features_exp_filename,index_col=0,dtype={'Cell_id':str})
 sag_features_exp = sag_features_exp.loc[sag_features_exp.Cell_id.isin(filtered_me_exc_cells),]
-sag_features_exp['type'] = 'All Exp'
+sag_features_exp['type'] = 'Exp'
 
 # Models
 sag_features_model = pd.read_csv(sag_features_model_filename,index_col=0,dtype={'Cell_id':str})
@@ -67,13 +69,13 @@ sag_perturbed_Nr5['type'] = 'Nr5like'
 
 
 sag_features_exp_selected = sag_features_exp.loc[sag_features_exp.Cell_id.isin(model_cell_ids),]
-sag_features_exp_selected['type'] = 'Modeled Exp'
+sag_features_exp_selected['type'] = 'Modeled_Exp'
 
 sig_dict = {}
 select_sag_feature ='sag_ratio1_3'
 current_amp_index = select_sag_feature.split('_')[-1]
 current_amp = -20*(int(current_amp_index)+1)
-data_dict = {'All Exp':sag_features_exp,'Modeled Exp':sag_features_exp_selected,
+data_dict = {'Exp':sag_features_exp,'Modeled_Exp':sag_features_exp_selected,
              'Model':sag_features_model,
 #             'Rbp4like':sag_perturbed_Rbp4,
 #             'Nr5like':sag_perturbed_Nr5
@@ -133,6 +135,8 @@ for label in raw_xticklabels:
     txt=label.get_text()
     type_ = txt.split('-')[0]
     num_ = txt.split('\n')[-1]
+    if 'Modeled_Exp' in type_:
+        type_ = type_.replace('Modeled_Exp', 'Exp $\cap$ Model')
     labels.append('%s\n%s\n%s'%(type_.split('.')[0],type_.split('.')[-1],num_))
 rawdata_axes.set_xticklabels(labels)
 

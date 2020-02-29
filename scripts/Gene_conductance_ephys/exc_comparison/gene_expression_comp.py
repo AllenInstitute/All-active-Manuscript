@@ -12,18 +12,21 @@ import dabest
 from statsmodels.stats.multitest import fdrcorrection
 from itertools import combinations
 from scipy.stats import mannwhitneyu
+import matplotlib as mpl
 
 
 #%% Data paths
 data_path = os.path.join(os.path.dirname(man_opt.__file__),os.pardir,'assets','aggregated_data')
 annotation_datapath = os.path.join(data_path,'anno.feather')
-cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_coloring_filename = os.path.join(data_path,'cre_color_tasic16.pkl')
 exc_expression_profile_path = os.path.join(data_path,'exc_expression_all.csv')
 
 #%% Read the data
 
 annotation_df = feather.read_dataframe(annotation_datapath)
 cre_color_dict = utility.load_pickle(cre_coloring_filename)
+cre_color_dict["Rbp4-Cre_KL100"] = mpl.colors.to_rgb('#008033') # Only for better contrast
+
 exc_lines = ["Nr5a1-Cre","Rbp4-Cre_KL100"]
 exc_palette = {exc_line_:cre_color_dict[exc_line_] for exc_line_ in exc_lines}
 
@@ -172,7 +175,7 @@ gene_df = dabest.load(exc_expression_melted, idx=idx_list,x="Cre_gene", y='cpm')
 f= gene_df.cliffs_delta.plot(custom_palette=palette_mod,
                  group_summaries='median_quartiles',swarm_desat=.9,
 #                 swarm_ylim=(1e-5,1e-3),
-                 swarmplot_kwargs={'size':2})
+                 swarmplot_kwargs={'size':2.5})
 
 rawdata_axes = f.axes[0]
 rawdata_axes = man_utils.annotate_sig_level(data_types,exc_lines,'Cre_line',

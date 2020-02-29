@@ -11,6 +11,7 @@ import dabest
 from statsmodels.stats.multitest import fdrcorrection
 from itertools import combinations
 from scipy.stats import mannwhitneyu
+import matplotlib as mpl
 
 # Data paths
 data_path = os.path.join(os.path.dirname(man_opt.__file__),os.pardir,'assets','aggregated_data')
@@ -18,7 +19,7 @@ mouse_data_filename = os.path.join(data_path,'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path,'Mouse_class_datatype.csv')
 hof_param_data_filename = os.path.join(data_path,'allactive_params.csv')
 hof_param_datatypes_filename = os.path.join(data_path,'allactive_params_datatype.csv')
-cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+cre_coloring_filename = os.path.join(data_path,'cre_color_tasic16.pkl')
 sdk_data_filename = os.path.join(data_path,'sdk.csv')
 sdk_datatype_filename = os.path.join(data_path,'sdk_datatype.csv')
 
@@ -27,6 +28,7 @@ hof_num = 1 # Only work with the best model
 hof_param_data = man_utils.read_csv_with_dtype(hof_param_data_filename, hof_param_datatypes_filename)
 best_param_data = hof_param_data.loc[hof_param_data.hof_index < hof_num,hof_param_data.columns != 'hof_index']
 cre_color_dict = utility.load_pickle(cre_coloring_filename)
+cre_color_dict["Rbp4-Cre_KL100"] = mpl.colors.to_rgb('#008033') # Only for better contrast
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 mouse_data_best = mouse_data_df.loc[mouse_data_df.hof_index == 0,]

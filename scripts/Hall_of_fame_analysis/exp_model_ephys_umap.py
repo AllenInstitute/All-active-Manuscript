@@ -34,7 +34,7 @@ def gridsearch_kmeans(data_,ax,max_clust_num=11):
     gap_sk = gap_arr -sk_arr
     gap_diff = gap_arr[:-1] - gap_sk[1:]
     optimal_cluster_num = clust_num_arr[np.where(gap_diff>0)[0][0]] 
-    fontsize=6
+    inset_fontsize=8
     axins = inset_axes(ax, width="100%", height="100%", 
                    bbox_to_anchor=(.15, .75, .35, .25),
                     bbox_transform=ax.transAxes,loc=2)
@@ -44,10 +44,10 @@ def gridsearch_kmeans(data_,ax,max_clust_num=11):
     axins.grid(False)
     axins.set_xticks(range(2,max_clust_num,2))
     axins.set_xticklabels([str(clust) for clust in range(2,max_clust_num,2)],
-                           fontsize=fontsize)
-    plt.setp(axins.get_yticklabels(),fontsize=fontsize)
-    axins.set_xlabel('# of clusters',fontsize=fontsize,labelpad=1)
-    axins.set_ylabel('gap statistic',fontsize=fontsize,labelpad=1)  
+                           fontsize=inset_fontsize)
+    plt.setp(axins.get_yticklabels(),fontsize=inset_fontsize)
+    axins.set_xlabel('# of clusters',fontsize=inset_fontsize,labelpad=1)
+    axins.set_ylabel('gap statistic',fontsize=inset_fontsize,labelpad=1)  
     axins.tick_params(axis='x', pad=-3)
     axins.tick_params(axis='y', pad=-3)
     return optimal_cluster_num
@@ -94,7 +94,7 @@ hof_model_ephys_max_amp_filename = os.path.join(data_path,'hof_model_ephys_max_a
 hof_model_ephys_max_amp_dtype_filename = os.path.join(data_path,
                                               'hof_model_ephys_max_amp_datatype.csv')
 
-cre_coloring_filename = os.path.join(data_path,'rnaseq_sorted_cre.pkl')
+bcre_coloring_filename = os.path.join(data_path,'bcre_color_tasic16.pkl')
 
 mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename,mouse_datatype_filename)
 bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index==0,['Cell_id','Broad_Cre_line']]
@@ -104,12 +104,10 @@ ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_filename,
 model_ephys_data = man_utils.read_csv_with_dtype(hof_model_ephys_max_amp_filename,
                                                   hof_model_ephys_max_amp_dtype_filename)
 
-cre_color_dict = utility.load_pickle(cre_coloring_filename)
-bcre_order = ['Htr3a','Sst','Pvalb','Pyr']
-bcre_dict = {'Pyr':'Rbp4-Cre_KL100','Pvalb':'Pvalb-IRES-Cre',
-             'Sst':'Sst-IRES-Cre','Htr3a':'Htr3a-Cre_NO152'}
-bcre_colors = [cre_color_dict[bcre_dict[bcre_]]
-        for bcre_ in bcre_order]
+bcre_color_dict = utility.load_pickle(bcre_coloring_filename)
+bcre_order = list(reversed(bcre_color_dict.keys()))
+
+bcre_colors = list(reversed(bcre_color_dict.values()))
 cmap = ListedColormap(bcre_colors)
 
 
@@ -143,11 +141,9 @@ data_exp['y-umap'] = umap_.named_steps['umap'].embedding_[:,1]
 # Transform new data (Features of all hof models)
 df_tsne_model_efeat_max = pd.merge(model_ephys_data,bcre_cluster,how='left',
                                 on='Cell_id')
-mephys_X_df,mephys_y_df,revised_features = man_utils.prepare_data_clf\
-                                (df_tsne_model_efeat_max,list(model_ephys_data),
+mephys_X_df,mephys_y_df,revised_features = man_utils.prepare_data_clf(df_tsne_model_efeat_max,list(model_ephys_data),
                                  target_field,least_pop=40*least_pop_index)
-e_features = [feature_ for feature_ in revised_features \
-                         if feature_ not in ['Cell_id','hof_index']]
+e_features = [feature_ for feature_ in revised_features if feature_ not in ['Cell_id','hof_index']]
 
 hof_ephys_data = mephys_X_df.loc[:,e_features].values
 mephys_y_df['label_encoder']= mephys_y_df[target_field].apply(lambda x:bcre_order.index(x))
@@ -182,10 +178,12 @@ ax[2].scatter(hof_data['x-umap'], hof_data['y-umap'], s= 2, c=hof_data['label_en
 nclusters=gridsearch_kmeans(hof_data.loc[:,['x-umap','y-umap']].values,ax[2])
 draw_kmeans_decision_boundary(hof_data.loc[:,['x-umap','y-umap']].values,nclusters,ax[2])
 
+
+fig.subplots_adjust(wspace=.12)
 for jj,ax_ in enumerate(ax):
     ax_.axis('off')
     ax_.set_title(title_list[jj], fontsize=axis_fontsize)
-cax = fig.add_axes([0.97, 0.2, 0.01,.6])
+cax = fig.add_axes([0.92, 0.2, 0.01,.6])
 cbar = plt.colorbar(sm,boundaries=np.arange(len(bcre_order)+1)-0.5,cax=cax)
 cbar.set_ticks(np.arange(len(bcre_order)))
 cbar.ax.set_yticklabels(bcre_order, fontsize=axis_fontsize)    
