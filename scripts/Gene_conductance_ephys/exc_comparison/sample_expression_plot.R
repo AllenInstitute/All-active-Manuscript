@@ -27,7 +27,7 @@ anno <- read_feather(anno_feather_path)
 anno <- anno %>% rename(sample_name = sample_id) 
 anno <- anno %>% filter(cre_label %in% unique(data_df$cre_label))
 
-marker_genes <- c('Nr5a1','Rbp4')
+marker_genes <- c('Rspo1','Fezf2')
 Hcn_genes <- c('Hcn1','Hcn2','Hcn3')
 all_genes <- c(marker_genes,Hcn_genes)
 
