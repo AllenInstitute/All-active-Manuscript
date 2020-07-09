@@ -5,8 +5,8 @@ options(stringsAsFactors = F)
 
 # Setting working directory -----------------------------------------------
 
-this.dir <- dirname(parent.frame(2)$ofile)
-setwd(this.dir)
+#this.dir <- dirname(parent.frame(2)$ofile)
+#setwd(this.dir)
 
 # Data paths --------------------------------------------------------------
 
@@ -51,4 +51,6 @@ p <- sample_heatmap_plot(data_df,
                          font_size = 16,
                          max_width = 20)
 
-print(p)
+#print(p)
+
+ggsave(file=file.path('figures','expression_plot_exc.svg'), p, width=8, height=5)
