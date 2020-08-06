@@ -34,12 +34,13 @@ all_genes <- c(marker_genes,Hcn_genes)
 data_df <- data_df %>% select(sample_name, all_genes)
   
 exc_lines <- c("Nr5a1-Cre","Rbp4-Cre_KL100")
-exc_group <- anno %>% group_by(cre_label) %>% select(cre_label, cre_id) %>% summarize(cre_id = mean(cre_id))
-group_order <- c()
+#exc_group <- anno %>% group_by(cre_label) %>% select(cre_label, cre_id) %>% summarize(cre_id = mean(cre_id))
+group_order <- c() # Order in which the groups appear
 
 for (line in exc_lines){
-  exc_cre_id <- exc_group[which(exc_group$cre_label == line),'cre_id']
-  group_order <- append(group_order,exc_cre_id$cre_id[1])
+  #exc_cre_id <- exc_group[which(exc_group$cre_label == line),'cre_id']
+  exc_cre_id <- anno %>% filter(cre_label == line) %>% slice(1) %>% pull(cre_id)
+  group_order <- append(group_order,exc_cre_id[1])
 }
 
 p <- sample_heatmap_plot(data_df, 
@@ -51,6 +52,5 @@ p <- sample_heatmap_plot(data_df,
                          font_size = 16,
                          max_width = 20)
 
-#print(p)
 
 ggsave(file=file.path('figures','expression_plot_exc.svg'), p, width=8, height=5)
