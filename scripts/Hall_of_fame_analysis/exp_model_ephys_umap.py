@@ -40,7 +40,8 @@ def gridsearch_kmeans(data_, ax, max_clust_num=11):
                        bbox_transform=ax.transAxes, loc=2)
 
     axins.plot(clust_num_arr, gap_arr, lw=1)
-    axins.vlines(optimal_cluster_num, axins.get_ylim()[0], axins.get_ylim()[1], lw=.8)
+    axins.vlines(optimal_cluster_num, axins.get_ylim()
+                 [0], axins.get_ylim()[1], lw=.8)
     axins.grid(False)
     axins.set_xticks(range(2, max_clust_num, 2))
     axins.set_xticklabels([str(clust) for clust in range(2, max_clust_num, 2)],
@@ -60,13 +61,15 @@ def draw_kmeans_decision_boundary(data_, nclusters, ax, h=5e-2):
     data_ = scaler.fit_transform(data_)
     x_min, x_max = data_[:, 0].min() - 1, data_[:, 0].max() + 1
     y_min, y_max = data_[:, 1].min() - 1, data_[:, 1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
 
     kmeans = KMeans(n_clusters=nclusters)
     kmeans.fit(data_)
     Z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
 
-    inv_scaler_transform = scaler.inverse_transform(np.c_[xx.ravel(), yy.ravel()])
+    inv_scaler_transform = scaler.inverse_transform(
+        np.c_[xx.ravel(), yy.ravel()])
     xx = inv_scaler_transform[:, 0].reshape(xx.shape)
     yy = inv_scaler_transform[:, 1].reshape(yy.shape)
     Z = Z.reshape(xx.shape)
@@ -84,20 +87,27 @@ def draw_kmeans_decision_boundary(data_, nclusters, ax, h=5e-2):
               aspect='auto', origin='lower')
 
 
-data_path = os.path.join(os.getcwd(), os.pardir, os.pardir, 'assets', 'aggregated_data')
+data_path = os.path.join(os.getcwd(), os.pardir,
+                         os.pardir, 'assets', 'aggregated_data')
 mouse_data_filename = os.path.join(data_path, 'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path, 'Mouse_class_datatype.csv')
-train_ephys_max_amp_filename = os.path.join(data_path, 'train_ephys_max_amp.csv')
-train_ephys_max_amp_dtype_filename = os.path.join(data_path, 'train_ephys_max_amp_dtype.csv')
-train_ephys_max_amp_fields_filename = os.path.join(data_path, 'train_ephys_max_amp_fields.json')
-hof_model_ephys_max_amp_filename = os.path.join(data_path, 'hof_model_ephys_max_amp.csv')
+train_ephys_max_amp_filename = os.path.join(
+    data_path, 'train_ephys_max_amp.csv')
+train_ephys_max_amp_dtype_filename = os.path.join(
+    data_path, 'train_ephys_max_amp_dtype.csv')
+train_ephys_max_amp_fields_filename = os.path.join(
+    data_path, 'train_ephys_max_amp_fields.json')
+hof_model_ephys_max_amp_filename = os.path.join(
+    data_path, 'hof_model_ephys_max_amp.csv')
 hof_model_ephys_max_amp_dtype_filename = os.path.join(data_path,
                                                       'hof_model_ephys_max_amp_datatype.csv')
 
 bcre_coloring_filename = os.path.join(data_path, 'bcre_color_tasic16.pkl')
 
-mouse_data_df = man_utils.read_csv_with_dtype(mouse_data_filename, mouse_datatype_filename)
-bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index == 0, ['Cell_id', 'Broad_Cre_line']]
+mouse_data_df = man_utils.read_csv_with_dtype(
+    mouse_data_filename, mouse_datatype_filename)
+bcre_cluster = mouse_data_df.loc[mouse_data_df.hof_index == 0, [
+    'Cell_id', 'Broad_Cre_line']]
 
 ephys_data = man_utils.read_csv_with_dtype(train_ephys_max_amp_filename,
                                            train_ephys_max_amp_dtype_filename)
@@ -141,10 +151,12 @@ df_tsne_model_efeat_max = pd.merge(model_ephys_data, bcre_cluster, how='left',
                                    on='Cell_id')
 mephys_X_df, mephys_y_df, revised_features = man_utils.prepare_data_clf(df_tsne_model_efeat_max, list(model_ephys_data),
                                                                         target_field, least_pop=40*least_pop_index)
-e_features = [feature_ for feature_ in revised_features if feature_ not in ['Cell_id', 'hof_index']]
+e_features = [feature_ for feature_ in revised_features if feature_ not in [
+    'Cell_id', 'hof_index']]
 
 hof_ephys_data = mephys_X_df.loc[:, e_features].values
-mephys_y_df['label_encoder'] = mephys_y_df[target_field].apply(lambda x: bcre_order.index(x))
+mephys_y_df['label_encoder'] = mephys_y_df[target_field].apply(
+    lambda x: bcre_order.index(x))
 hof_data = pd.concat([mephys_X_df, mephys_y_df], axis=1)
 
 hof_transform = umap_pipeline.transform(hof_ephys_data)
@@ -153,7 +165,7 @@ hof_data['y-umap'] = hof_transform[:, 1]
 
 title_list = ['Experiment', 'Best Model', 'Hall of Fame']
 
-sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(0, len(bcre_order)-1))
+sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(0, len(bcre_order) - 1))
 sm.set_array([])
 figname = 'figures/umap_ephys.png'
 utility.create_filepath(figname)
@@ -162,8 +174,10 @@ sns.set(style='whitegrid')
 fig, ax = plt.subplots(1, 3, sharey=True, figsize=(10, 4))
 ax[0].scatter(data_exp['x-umap'], data_exp['y-umap'], s=10, c=data_exp['label_encoder'],
               cmap=cmap)
-nclusters = gridsearch_kmeans(data_exp.loc[:, ['x-umap', 'y-umap']].values, ax[0])
-draw_kmeans_decision_boundary(data_exp.loc[:, ['x-umap', 'y-umap']].values, nclusters, ax[0])
+nclusters = gridsearch_kmeans(
+    data_exp.loc[:, ['x-umap', 'y-umap']].values, ax[0])
+draw_kmeans_decision_boundary(
+    data_exp.loc[:, ['x-umap', 'y-umap']].values, nclusters, ax[0])
 
 ax[1].scatter(hof_data.loc[hof_data.hof_index == 0, 'x-umap'],
               hof_data.loc[hof_data.hof_index == 0, 'y-umap'], s=10, c=hof_data.loc[hof_data.hof_index == 0,
@@ -174,8 +188,10 @@ draw_kmeans_decision_boundary(hof_data.loc[hof_data.hof_index == 0, ['x-umap', '
                               nclusters, ax[1])
 ax[2].scatter(hof_data['x-umap'], hof_data['y-umap'], s=2, c=hof_data['label_encoder'],
               cmap=cmap)
-nclusters = gridsearch_kmeans(hof_data.loc[:, ['x-umap', 'y-umap']].values, ax[2])
-draw_kmeans_decision_boundary(hof_data.loc[:, ['x-umap', 'y-umap']].values, nclusters, ax[2])
+nclusters = gridsearch_kmeans(
+    hof_data.loc[:, ['x-umap', 'y-umap']].values, ax[2])
+draw_kmeans_decision_boundary(
+    hof_data.loc[:, ['x-umap', 'y-umap']].values, nclusters, ax[2])
 
 
 fig.subplots_adjust(wspace=.12)
@@ -183,7 +199,8 @@ for jj, ax_ in enumerate(ax):
     ax_.axis('off')
     ax_.set_title(title_list[jj], fontsize=axis_fontsize)
 cax = fig.add_axes([0.92, 0.2, 0.01, .6])
-cbar = plt.colorbar(sm, boundaries=np.arange(len(bcre_order)+ 1) - 0.5, cax=cax)
+cbar = plt.colorbar(sm, boundaries=np.arange(
+    len(bcre_order) + 1) - 0.5, cax=cax)
 cbar.set_ticks(np.arange(len(bcre_order)))
 cbar.ax.set_yticklabels(bcre_order, fontsize=axis_fontsize)
 cbar.outline.set_visible(False)
