@@ -20,7 +20,7 @@ counts_data <- read_feather(counts_data_path)
 unique_genes <- sort(unique(names(counts_data)))
 
 # Exc lines
-exc_subclass_labels <- c('L2/3 IT', 'L4', 'L5 IT', 'L5 CF', 'NP', 'L6 IT', 'L6 CT', 'L6b')
+exc_subclass_labels <- c('L2/3 IT', 'L4', 'L5 IT', 'L5 PT', 'NP', 'L6 IT', 'L6 CT', 'L6b')
 exc_anno <- anno_feather_data %>% filter(subclass_label %in% exc_subclass_labels) %>%
                          select(sample_id, subclass_label)
 
