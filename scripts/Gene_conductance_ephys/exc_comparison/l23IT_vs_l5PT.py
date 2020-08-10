@@ -14,7 +14,6 @@ from ateamopt.utils import utility
 
 data_path = os.path.join(os.path.dirname(
     man_opt.__file__), os.pardir, 'assets', 'aggregated_data')
-cre_coloring_filename = os.path.join(data_path, 'cre_color_tasic16.pkl')
 inh_expression_profile_path = os.path.join(data_path, 'inh_expression_all.csv')
 mouse_data_filename = os.path.join(data_path, 'Mouse_class_data.csv')
 mouse_datatype_filename = os.path.join(data_path, 'Mouse_class_datatype.csv')
