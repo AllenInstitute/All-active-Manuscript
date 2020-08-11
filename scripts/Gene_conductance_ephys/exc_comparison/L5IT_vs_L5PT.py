@@ -104,7 +104,7 @@ cond_types = param_data.conductance.unique().tolist()
 param_data['param_ttype'] = param_data.apply(lambda x: x.conductance + '.' +
                                              x.ttype, axis=1)
 
-palette_channel = {type_: tasic_colors[type_.split('.')[-1]] if type_.split('.')[-1] != 'L5 CF' else tasic_colors['L5 IT']
+palette_channel = {type_: tasic_colors[type_.split('.')[-1]] if type_.split('.')[-1] != 'L5 CF' else tasic_colors['L5 PT']
                    for type_ in param_data.param_ttype.unique()}
 
 
