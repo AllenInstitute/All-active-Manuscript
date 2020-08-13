@@ -184,7 +184,7 @@ p <- sample_heatmap_plot(counts,
                          colorset=diverge_hcl(8))
 
 
-ggsave(file=file.path('figures','heatmap_all.png'), p, width=18, height=22)
+ggsave(file=file.path('figures','heatmap_all.png'), p, width=16, height=22)
 
 p1 <- sample_heatmap_plot(counts, 
                           anno, 
@@ -193,12 +193,12 @@ p1 <- sample_heatmap_plot(counts,
                           group_order = group_order,
                           log_scale = TRUE,
                           font_size = 20,
-                          label_height = 10,
+                          label_height = 12,
                           max_width = 10,
                           colorset=diverge_hcl(8))
 
 
-ggsave(file=file.path('figures','heatmap_channel_genes.png'), p1, width=12, height=14)
+ggsave(file=file.path('figures','heatmap_channel_genes.png'), p1, width=14, height=12)
 
 p2 <- sample_heatmap_plot(counts, 
                           anno, 
@@ -212,4 +212,4 @@ p2 <- sample_heatmap_plot(counts,
                           colorset=diverge_hcl(8))
 
 
-ggsave(file=file.path('figures','heatmap_predicted_genes.png'), p2, width=8, height=6)
+ggsave(file=file.path('figures','heatmap_predicted_genes.png'), p2, width=10, height=6)

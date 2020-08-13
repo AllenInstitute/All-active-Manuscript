@@ -34,7 +34,9 @@ select_exc_counts_data[,which(names(select_exc_counts_data) != 'sample_id')] <-
 
 
 channel_genes <- c('Kcnc1','Kcnd1','Kcnd2','Kcnd3','Kcnab1', 'Kcnip1', 'Kcnip2', 
-                        'Hcn1', 'Hcn2', 'Hcn3', 'Cacna1g', 'Scn1a', 'Scn3a', 'Scn8a')
+                        'Kcna1', 'Kcna2', 'Kcna3', 'Kcna4', 'Kcna5', 'Kcna6',
+                        'Kcna7', 'Kcna10', 'Hcn1', 'Hcn2', 'Hcn3', 'Cacna1g',
+                        'Scn1a', 'Scn3a', 'Scn8a')
 channel_hits <- unique(grep(paste(channel_genes,collapse="|"),
                         unique_genes, value=TRUE))
 
