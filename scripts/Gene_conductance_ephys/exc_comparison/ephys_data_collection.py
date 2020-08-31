@@ -17,7 +17,8 @@ import argparse
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
-parser = argparse.ArgumentParser(description='Get cell-type specific ephys features')
+parser = argparse.ArgumentParser(
+    description='Get cell-type specific ephys features')
 parser.add_argument('-l', '--cty_list', nargs='+',
                     help='List of types to be selected', required=True)
 parser.add_argument('-c', '--cty', type=str, choices=['ttype', 'Cre_line'],
@@ -39,13 +40,16 @@ def get_efeatures(cell_id):
     lr = lims.LimsReader()
 
     cell_efeatures_dir = os.path.join(efel_feature_path, cell_id)
-    cell_protocols_filename = os.path.join(cell_efeatures_dir, 'protocols.json')
-    cell_features_filename = os.path.join(efel_feature_path, cell_id, 'features.json')
+    cell_protocols_filename = os.path.join(
+        cell_efeatures_dir, 'protocols.json')
+    cell_features_filename = os.path.join(
+        efel_feature_path, cell_id, 'features.json')
     efeature_filenames = [cell_protocols_filename, cell_features_filename]
 
     if not all(os.path.exists(filename_) for filename_ in efeature_filenames):
         utility.create_filepath(cell_protocols_filename)
-        nwb_path = lr.get_nwb_path_from_lims(int(cell_id), get_sdk_version=True)
+        nwb_path = lr.get_nwb_path_from_lims(
+            int(cell_id), get_sdk_version=True)
         cell_ephys_dir = os.path.join(ephys_dir_origin, cell_id)
         nwb_handler = NwbExtractor(cell_id, nwb_path)
         ephys_data_path, stimmap_filename = nwb_handler.save_cell_data_web(
@@ -69,7 +73,8 @@ def Main():
     data_path = os.path.join(os.path.dirname(man_opt.__file__),
                              os.pardir, 'assets', 'aggregated_data')
     mouse_data_filename = os.path.join(data_path, 'Mouse_class_data.csv')
-    mouse_datatype_filename = os.path.join(data_path, 'Mouse_class_datatype.csv')
+    mouse_datatype_filename = os.path.join(
+        data_path, 'Mouse_class_datatype.csv')
     me_ttype_map_path = os.path.join(data_path, 'me_ttype.pkl')
 
     sdk_data_filename = os.path.join(data_path, 'sdk.csv')

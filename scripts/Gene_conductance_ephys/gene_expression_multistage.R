@@ -200,9 +200,30 @@ p1 <- sample_heatmap_plot(counts,
 
 ggsave(file=file.path('figures','heatmap_channel_genes.png'), p1, width=14, height=12)
 
+
+# Pairwise comparisons between channel genes
+
+# Post-hoc one-way manova: https://www.datanovia.com/en/lessons/one-way-manova-in-r/
+
+pwc <- counts %>% 
+    left_join(anno %>% select(sample_name, subclass_label),by='sample_name') %>% 
+    select(c(sample_name, channel_genes, subclass_label)) %>%
+    mutate_at("subclass_label", factor) %>% head(100) %>%
+    gather(key = "genes", value = "cpm", all_of(channel_genes)) %>%
+    group_by(genes) %>% 
+    tukey_hsd(cpm ~ subclass_label) %>%
+    select(-estimate, -conf.low, -conf.high) %>%
+    filter(!p.adj.signif %in% c('ns', '?'))
+
+diff_genes <- pwc %>% pull(genes) %>% unique()
+
+undetected_genes <- setdiff(union(predicted_genes, diff_genes), predicted_genes)
+
+Dgenes <- c(predicted_genes, undetected_genes)
+
 p2 <- sample_heatmap_plot(counts, 
                           anno, 
-                          genes = predicted_genes,
+                          genes = Dgenes,
                           grouping = "subclass",
                           group_order = group_order,
                           log_scale = TRUE,
@@ -213,3 +234,5 @@ p2 <- sample_heatmap_plot(counts,
 
 
 ggsave(file=file.path('figures','heatmap_predicted_genes.png'), p2, width=10, height=6)
+
+

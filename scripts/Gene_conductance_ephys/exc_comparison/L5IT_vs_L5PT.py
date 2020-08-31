@@ -67,11 +67,14 @@ param_pyr = param_pyr.dropna(axis=1, how='all')
 param_pyr = param_pyr.dropna(subset=[cond for cond in list(param_pyr)
                                      if cond in conductance_params])
 
-select_conds = ['gbar_Ih.apical', 'gbar_Ih.somatic',
-                'gbar_NaTa_t.axonal',
-                'gbar_Kv3_1.axonal', 'gbar_Kv3_1.somatic',
-                'gbar_K_Tst.axonal', 'gbar_K_Tst.somatic',
-                'gbar_Ca_LVA.axonal', 'gbar_Ca_LVA.somatic']
+select_conds = [
+    'gbar_Ih.apical', 'gbar_Ih.somatic',
+    'gbar_NaTa_t.axonal', 'gbar_NaTs2_t.somatic',
+    'gbar_Nap_Et2.axonal', 'gbar_Nap_Et2.somatic',
+    'gbar_Kv3_1.axonal', 'gbar_Kv3_1.somatic',
+    'gbar_K_Tst.axonal', 'gbar_K_Tst.somatic',
+    'gbar_K_Pst.axonal', 'gbar_K_Pst.somatic'
+]
 
 diff_param_df = pairwise_comp(
     param_pyr, 'ttype', ttype_cty_me, select_conds)
@@ -133,8 +136,20 @@ ttype_cty_trans = ['L5 PT', 'L5 IT']
 
 # %% Statistical comparison
 
-select_genes = ['Hcn1', 'Hcn2', 'Scn8a', 'Kcnc1', 'Kcnd1',
-                'Kcnd2', 'Kcnd3', 'Kcnab1', 'Kcnip1', 'Kcnip2', 'Cacna1g']
+gene_channel_dict = {
+    'Ih': ['Hcn1', 'Hcn2', 'Hcn3'],
+    'NaP': ['Scn1a', 'Scn3a', 'Scn8a'],
+    'NaT': ['Scn1a', 'Scn3a', 'Scn8a'],
+    'KP': ['Kcna1', 'Kcna2', 'Kcna3', 'Kcna4', 'Kcna5', 'Kcna6',
+           'Kcna7', 'Kcna10'],
+    'KT': ['Kcnd1', 'Kcnd2', 'Kcnd3', 'Kcnab1', 'Kcnip1', 'Kcnip2'],
+    'Kv31': ['Kcnc1']
+}
+
+select_genes = []
+for channel, genes in gene_channel_dict.items():
+    select_genes.extend(genes)
+
 expressed_genes = [
     select_gene for select_gene in select_genes if select_gene in list(trans_expression)]
 trans_expression = trans_expression.dropna(axis=1, how='all')
@@ -147,13 +162,6 @@ gene_sig_grouped = diff_gene_df.groupby('param')
 
 # %% Visualize estimation statistics
 
-gene_channel_dict = {
-    'Ih': ['Hcn1', 'Hcn2'],
-    'NaT': ['Scn8a'],
-    'KT': ['Kcnd1', 'Kcnd2', 'Kcnd3', 'Kcnab1', 'Kcnip1', 'Kcnip2'],
-    'Kv31': ['Kcnc1'],
-    'CaLV': ['Cacna1g']
-}
 
 expression_select = trans_expression.loc[:,
                                          expressed_genes + ['subclass_label']]
