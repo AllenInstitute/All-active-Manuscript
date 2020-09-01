@@ -200,8 +200,12 @@ def getModel(cell_id, **kwargs):
     model_url = model_requests_json['msg'][0]['well_known_files'][0]['download_link']
     model_url = api_url + model_url
     model_params = requests.get(model_url)
-    model_filename = f'{cell_id}/{cell_id}_fit.json'
-    utility.create_filepath(model_filename)
+    model_filename = f'{cell_id}/{cell_id}_fit.json' if not kwargs.get(
+        'download_path') else kwargs['download_path']
+
+    # Check if a new directory has to be created
+    if len(model_filename.split('/')) > 1:
+        utility.create_filepath(model_filename)
     with open(model_filename, 'wb') as json_file:
         json_file.write(model_params.content)
     return model_filename
