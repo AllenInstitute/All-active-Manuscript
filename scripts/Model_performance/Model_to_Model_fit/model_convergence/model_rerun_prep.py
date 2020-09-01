@@ -1,39 +1,13 @@
-import requests
 from allensdk.api.queries.biophysical_api import BiophysicalApi
 from allensdk.core.cell_types_cache import CellTypesCache
 import json
 from collections import defaultdict
 import sys
-from ateamopt.utils import utility
 import os
 import logging
+from man_opt.utils import getModel
 
 logging.basicConfig(level=logging.DEBUG)
-
-# %% Download new all-active model for a specific cell-id
-
-
-def getModel(cell_id, **kwargs):
-    api_url = "http://api.brain-map.org"
-    query_url = api_url + "/api/v2/data/query.json"
-
-    # payload_all = {"criteria": "model::Specimen,rma::criteria,well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'""",
-    #                "num_rows": 1000}
-
-    payload_specific = {"criteria": "model::Specimen,rma::criteria,[id$eq%d]" % cell_id,
-                        "include": "well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'"""}
-
-    model_requests = requests.get(url=query_url, params=payload_specific)
-    model_requests_json = model_requests.json()
-
-    model_url = model_requests_json['msg'][0]['well_known_files'][0]['download_link']
-    model_url = api_url + model_url
-    model_params = requests.get(model_url)
-    model_filename = f'{cell_id}/{cell_id}_fit.json'
-    utility.create_filepath(model_filename)
-    with open(model_filename, 'wb') as json_file:
-        json_file.write(model_params.content)
-    return model_filename
 
 
 # %% Get ephys experiment file and the reconstruction

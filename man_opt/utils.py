@@ -2,7 +2,7 @@ import pandas as pd
 from ateamopt.utils import utility
 import numpy as np
 import re
-import numpy as np
+import requests
 
 
 def read_csv_with_dtype(data_filename, datatype_filename):
@@ -43,7 +43,8 @@ def prepare_data_clf(data, feature_fields, target_field,
                      least_pop=5):
 
     data = data.loc[:, ~data.columns.duplicated()]
-    data_section = data.loc[:, feature_fields + property_fields + [target_field]]
+    data_section = data.loc[:, feature_fields +
+                            property_fields + [target_field]]
 
     # drop any cell with target field nan
     data_section = data_section.dropna(axis=0, how='any',
@@ -122,15 +123,15 @@ def annotate_sig_level(var_levels, hue_levels, hue_var, sig_group, sig_group_var
                 plot_data[hue_var] == hue_), plot_data_y]
             data = data.dropna(how='any', axis=0)
             iqr = np.percentile(data, 75) - np.percentile(data, 25)
-            whisk_ = np.percentile(data, 75) + .75*iqr
+            whisk_ = np.percentile(data, 75) + .75 * iqr
             whisk_max = whisk_ if whisk_ > whisk_max else whisk_max
 
         y_sig_dict[var_level] = whisk_max
     y_sig_max = np.max(list(y_sig_dict.values()))
     line_height_factor = kwargs.get('line_height_factor') or .05
     line_offset_factor = kwargs.get('line_offset_factor') or .2
-    line_height = line_height_factor*y_sig_max
-    line_offset = line_offset_factor*y_sig_max
+    line_height = line_height_factor * y_sig_max
+    line_offset = line_offset_factor * y_sig_max
 
     comp_sign = kwargs.get('comp_sign') or '<'
     for y_sig_key, y_sig_val in y_sig_dict.items():
@@ -156,22 +157,51 @@ def annotate_sig_level(var_levels, hue_levels, hue_var, sig_group, sig_group_var
             cre_x_idx = hue_levels.index(cre_x)
             cre_y_idx = hue_levels.index(cre_y)
             if plot_type == 'dabest':
-                x_drift_x = abs(cre_x_idx-mid_hue_index)
-                x_drift_y = abs(cre_y_idx-mid_hue_index)
+                x_drift_x = abs(cre_x_idx - mid_hue_index)
+                x_drift_y = abs(cre_y_idx - mid_hue_index)
             else:
                 x_center = var_levels.index(param_)
-                x_drift_x = abs(cre_x_idx-mid_hue_index+0.5)*bar_width
-                x_drift_y = abs(cre_y_idx-mid_hue_index+0.5)*bar_width
+                x_drift_x = abs(cre_x_idx - mid_hue_index + 0.5) * bar_width
+                x_drift_y = abs(cre_y_idx - mid_hue_index + 0.5) * bar_width
             if cre_x_idx < cre_y_idx:
                 x1, x2 = x_center - x_drift_x, x_center + x_drift_y
             else:
                 x1, x2 = x_center + x_drift_x, x_center - x_drift_y
 
-            ax.plot([x1, x1, x2, x2], [y_sig, y_sig+line_height, y_sig+line_height, y_sig],
+            ax.plot([x1, x1, x2, x2], [y_sig, y_sig + line_height, y_sig + line_height, y_sig],
                     lw=1, c='k')
 
-            ax.text((x1+x2)*.5, y_sig+.5*line_height, row_group['sig_level'], ha='center',
+            ax.text((x1 + x2) * .5, y_sig + .5 * line_height, row_group['sig_level'], ha='center',
                     va='bottom', color='k')
 
             y_sig += line_height
     return ax
+
+
+# Download new all-active model for a specific cell-id
+
+
+def getModel(cell_id, **kwargs):
+    """
+    Download an all-active model by cell_id using Allen Institute api
+    """
+    api_url = "http://api.brain-map.org"
+    query_url = api_url + "/api/v2/data/query.json"
+
+    # payload_all = {"criteria": "model::Specimen,rma::criteria,well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'""",
+    #                "num_rows": 1000}
+
+    payload_specific = {"criteria": "model::Specimen,rma::criteria,[id$eq%d]" % cell_id,
+                        "include": "well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'"""}
+
+    model_requests = requests.get(url=query_url, params=payload_specific)
+    model_requests_json = model_requests.json()
+
+    model_url = model_requests_json['msg'][0]['well_known_files'][0]['download_link']
+    model_url = api_url + model_url
+    model_params = requests.get(model_url)
+    model_filename = f'{cell_id}/{cell_id}_fit.json'
+    utility.create_filepath(model_filename)
+    with open(model_filename, 'wb') as json_file:
+        json_file.write(model_params.content)
+    return model_filename
