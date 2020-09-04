@@ -3,6 +3,9 @@ library(feather)
 # RNA-seq data path
 data_loc = '/data/rnaseqanalysis/shiny/facs_seq/Mm_VISp_14236_20180912'
 
+# Project path
+project_path <- file.path(getwd(),'..','..','..','assets','aggregated_data')
+
 # Annotation data
 anno_feather_path <- file.path(data_loc,'anno.feather')
 anno_feather_data <- read_feather(anno_feather_path)
@@ -30,7 +33,7 @@ select_exc_counts_data[,which(names(select_exc_counts_data) != 'sample_id')] <-
                     'sample_id')], 1, function(x)(log2(x+1))))
 
 
-cre_genes <- c('Nr5a1','Rbp4','KL100')
+cre_genes <- c('Nr5a1', 'Rbp4', 'KL100', 'Rspo1', 'Fezf2')
 channel_genes <- c('Kcn','Scn','Nav','Cacna')
 hcn_genes <- c('Hcn1','Hcn2','Hcn3','Hcn4')
 hcn_hits <- unique(grep(paste(hcn_genes,collapse="|"), 
@@ -49,7 +52,7 @@ all_channel_expr_data <- select_exc_counts_data[,c('sample_id',all_channel_genes
 # Merge with annotation data to get the Cre-line info
 all_gene_expr <- merge(select_exc_samples_data,all_channel_expr_data,
                        by="sample_id")
-write.csv(all_gene_expr, file = "exc_expression_all.csv",row.names = FALSE)
+write.csv(all_gene_expr, file = file.path(project_path, "exc_expression_all.csv"),row.names = FALSE)
 
 
 

@@ -1,0 +1,77 @@
+{
+    "stage_jobconfig": {
+        "offspring_size": 4,
+        "timeout": 300,
+        "filter_rule": "",
+        "depol_block_check": true,
+        "cp_dir": "checkpoints",
+        "cp_backup_dir": "checkpoints_backup",
+        "adjust_param_bounds_prev": 0.5,
+        "cp_backup_frequency": 5,
+        "hoc_export": true,
+        "optim_config": {
+            "nengines": 256,
+            "qos": "celltypes",
+            "main_script": "Optim_Main.py",
+            "jobmem": "150g",
+            "jobtime": "24:00:00",
+            "nnodes": 16,
+            "error_stream": "/dev/null",
+            "ipyparallel": true,
+            "ipyparallel_db": "nodb",
+            "nprocs": 16,
+            "output_stream": "/dev/null"
+        },
+        "AP_initiation_zone": "axon",
+        "model_postprocess": true,
+        "calc_model_perf": true,
+        "analysis_config": {
+        },
+        "run_peri_comparison": false,
+        "run_hof_analysis": true,
+        "max_ngen": 4,
+        "stage_stimtypes": [
+            "Long Square"
+        ],
+        "add_fi_kink": false,
+        "learn_eval_trend": false,
+        "calc_time_statistics": false,
+        "seed": [
+            1,
+            2,
+            3,
+            4
+        ],
+        "stage_name": "Stage2",
+        "run_released_aa_comparison": false,
+        "prev_stage_path": ""
+    },
+    "highlevel_jobconfig": {
+        "ephys_dir": "",
+        "compiled_modfiles_dir": "x86_64",
+        "conda_env": "ateam_opt",
+        "job_dir": ".",
+        "all_features_path": "",
+        "non_standard_nwb": false,
+        "data_source": "local",
+        "feature_stimtypes": [
+            "Long Square"
+        ],
+        "stimmap_file": "",
+        "machine": "hpc-login.corp.alleninstitute.org",
+        "log_level": "DEBUG",
+        "all_protocols_path": "",
+        "swc_path": "468193142.swc",
+        "dryrun": false,
+        "axon_type": "stub_axon"
+    },
+    "parameters": "config_dend/parameters.json",
+    "mechanism": "config_dend/mechanism.json",
+    "released_aa_mechanism": null,
+    "train_features": "config_dend/features.json",
+    "train_protocols": "config_dend/protocols.json",
+    "released_aa_model_dict": {},
+    "released_aa_model": null,
+    "released_peri_model": null,
+    "released_peri_mechanism": null
+}
