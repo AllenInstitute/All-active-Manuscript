@@ -5,6 +5,12 @@ import re
 import requests
 
 
+# transcriptomic subclasses for ME data (Gouwens 2019 Nature Neuro)
+exc_subclasses = ['L2/3 IT', 'L4', 'L5 IT',
+                  'L5 PT', 'NP', 'L6 IT', 'L6 CT', 'L6b']
+inh_subclasses = ['Vip', 'Sst', 'Pvalb']
+
+
 def read_csv_with_dtype(data_filename, datatype_filename):
     datatypes = pd.read_csv(datatype_filename)['types']
     data = pd.read_csv(data_filename, dtype=datatypes.to_dict())
@@ -209,3 +215,17 @@ def getModel(cell_id, **kwargs):
     with open(model_filename, 'wb') as json_file:
         json_file.write(model_params.content)
     return model_filename
+
+
+def add_transcriptomic_subclass(data, me_ttype_map_path):
+    me_ttype_map = utility.load_pickle(me_ttype_map_path)
+    me_ttype_map['Other'] = 'Other'
+    data['me_type'] = data['me_type'].fillna('Other')
+    data['ttype'] = data['me_type'].apply(lambda x: me_ttype_map[x])
+    return data
+
+
+def add_broad_subclass(data):
+    data['Broad_subclass'] = data['ttype'].apply(lambda x: 'Pyr' if x in exc_subclasses
+                                                 else(x if x in inh_subclasses else 'Other'))
+    return data
