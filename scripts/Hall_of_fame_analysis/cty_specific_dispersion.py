@@ -194,7 +194,7 @@ fig.savefig('figures/intra_inter_distbn.svg', bbox_inches='tight')
 plt.close(fig)
 
 
-# %% Plot the inhibitory block (Htr3a, Sst, Pvalb)
+# %% Plot the inhibitory block (Vip, Sst, Pvalb)
 
 
 plt_inh_dispersion = 1
