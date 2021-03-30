@@ -46,7 +46,7 @@ deep_pyr = param_pyr.loc[(param_pyr.Layer == '5') &
 filtered_pyr_cells = sup_pyr + deep_pyr
 param_pyr = param_pyr.loc[param_pyr.Cell_id.isin(filtered_pyr_cells), ]
 param_pyr['depth'] = param_pyr['Layer'].apply(
-    lambda x: 'sup' if x == '2/3' else 'deep')
+    lambda x: 'L2/3 PC' if x == '2/3' else 'L5 PC')
 depth_cty = param_pyr.depth.unique().tolist()
 all_cre_lines = mouse_data.loc[mouse_data.Cell_id.isin(
     filtered_pyr_cells), 'Cre_line'].unique().tolist()
@@ -81,7 +81,6 @@ cond_sig_grouped = diff_param_df.groupby('param')
 
 # %% Visualize estimation statistics
 
-sns.set(font_scale=1.2)
 param_pyr_select = param_pyr.loc[:, select_conds + ['depth']]
 param_data = pd.melt(param_pyr_select, id_vars='depth', var_name='conductance',
                      value_name='value')
@@ -93,7 +92,8 @@ depth_types = sorted(param_data.depth.unique().tolist(), reverse=True)
 param_data['param_depth'] = param_data.apply(lambda x: x.conductance + '.' +
                                              x.depth, axis=1)
 
-palette_channel = {type_: layer_cty_colors['Pyr-L5'] if type_.split('.')[-1] == 'deep' else layer_cty_colors['Pyr-L2/3']
+palette_channel = {type_: layer_cty_colors['Pyr-L5'] if type_.split('.')[-1] == 'L5 PC'
+                   else layer_cty_colors['Pyr-L2/3']
                    for type_ in param_data.param_depth.unique()}
 
 
@@ -125,7 +125,7 @@ filtered_pyr_cells = sup_pyr + deep_pyr
 expression_pyr = expression_pyr.loc[expression_pyr.sample_id.isin(
     filtered_pyr_cells), ]
 expression_pyr['depth'] = expression_pyr['layer_label'].apply(
-    lambda x: 'sup' if x == 'L2/3-L4' else 'deep')
+    lambda x: 'L2/3 PC' if x == 'L2/3-L4' else 'L5 PC')
 
 # %% Statistical comparison
 
@@ -145,28 +145,29 @@ gene_sig_grouped = diff_gene_df.groupby('param')
 # %% Visualize estimation statistics
 
 gene_channel_dict = {
-    'Ih': ['Hcn1', 'Hcn2'],
-    'NaT': ['Scn8a'],
-    'KT': ['Kcnd1', 'Kcnd2', 'Kcnd3', 'Kcnab1', 'Kcnip1', 'Kcnip2'],
-    'Kv31': ['Kcnc1'],
-    'CaLV': ['Cacna1g']
+    'Ih': ['Hcn1'],
+    # 'NaT': ['Scn8a'],
+    # 'KT': ['Kcnd1', 'Kcnd2', 'Kcnd3', 'Kcnab1', 'Kcnip1', 'Kcnip2'],
+    # 'Kv31': ['Kcnc1'],
+    # 'CaLV': ['Cacna1g']
 }
 
 expression_select = expression_pyr.loc[:, expressed_genes + ['depth']]
 gene_expr = pd.melt(expression_select, id_vars='depth', var_name='genes',
                     value_name='value')
 gene_types = gene_expr.genes.unique().tolist()
-depth_types = sorted(gene_expr.depth.unique().tolist(), reverse=True)
+depth_types = sorted(gene_expr.depth.unique().tolist())
 gene_expr['gene_depth'] = gene_expr.apply(lambda x: x.genes + '.' +
                                           x.depth, axis=1)
-palette_gene = {type_: layer_cty_colors['Pyr-L5'] if type_.split('.')[-1] == 'deep' else layer_cty_colors['Pyr-L2/3']
+palette_gene = {type_: layer_cty_colors['Pyr-L5'] if type_.split('.')[-1] == 'L5 PC' else
+                layer_cty_colors['Pyr-L2/3']
                 for type_ in gene_expr.gene_depth.unique()}
 
+sns.set(font_scale=1.5)
 for channel, genes in gene_channel_dict.items():
-
-    fig, ax = plt.subplots(ncols=2, figsize=(15, 6),
-                           gridspec_kw={"wspace": 0.3,
-                                        "hspace": 0.3}, dpi=100)
+    fig, ax = plt.subplots(ncols=2, figsize=(15, 7),
+                           gridspec_kw={"hspace": 0.5,
+                                        "width_ratios": [1.75, 1]})
 
     channel_select = [
         channel_ for channel_ in cond_types if channel in channel_]
@@ -186,7 +187,21 @@ for channel, genes in gene_channel_dict.items():
                                           group_summaries='median_quartiles', swarm_desat=.9)
 
     ax[0] = man_utils.annotate_sig_level(channel_select, depth_types, 'depth',
-                                         cond_sig_grouped, 'Comp_type', param_data_select, 'conductance', 'value', ax[0])
+                                         cond_sig_grouped, 'Comp_type', param_data_select,
+                                         'conductance', 'value', ax[0])
+
+    ax[0].ticklabel_format(style='sci', scilimits=(0, 1), axis='y')
+    ax[0].set_ylabel(r'$\mathrm{\bar{g}\;(S\:cm^{-2})}$')
+    raw_xticklabels = ax[0].get_xticklabels()
+    labels = []
+    for label in raw_xticklabels:
+        txt = label.get_text()
+        type_ = txt.split('-')[0]
+        param_ = type_.rsplit('.', 1)[0]
+        cty_ = type_.split('.')[-1].split('\n')[0]
+        num_ = txt.split('\n')[-1]
+        labels.append('%s\n%s\n%s' % (param_, cty_, num_))
+    ax[0].set_xticklabels(labels)
 
 #    ax[0].set_title(r'-log(p-val) = %.2f' % -np.log10(cond_p_val))
 
@@ -206,6 +221,21 @@ for channel, genes in gene_channel_dict.items():
                                        group_summaries='median_quartiles', swarm_desat=.9,
                                        float_contrast=True)
     ax[1] = man_utils.annotate_sig_level(genes, depth_types, 'depth',
-                                         gene_sig_grouped, 'Comp_type', gene_expr_correlate, 'genes', 'value', ax[1])
+                                         gene_sig_grouped, 'Comp_type', gene_expr_correlate,
+                                         'genes', 'value', ax[1])
+    ax[1].set_ylabel(r'$\mathrm{log}_{2}(cpm+1)$')
+    raw_xticklabels = ax[1].get_xticklabels()
+    labels = []
+    for label in raw_xticklabels:
+        txt = label.get_text()
+        type_ = txt.split('-')[0]
+        param_ = type_.rsplit('.', 1)[0]
+        cty_ = type_.split('.')[-1].split('\n')[0]
+        num_ = txt.split('\n')[-1]
+        labels.append('%s\n%s\n%s' % (param_, cty_, num_))
+    ax[1].set_xticklabels(labels)
 
-    plt.show()
+    fig.savefig(os.path.join('figures/%s_l23vl5.svg' % channel), bbox_inches='tight')
+    plt.close(fig)
+
+# %%

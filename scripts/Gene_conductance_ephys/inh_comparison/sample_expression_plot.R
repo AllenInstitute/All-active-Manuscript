@@ -36,8 +36,8 @@ inh_group <- anno %>% group_by(subclass_label) %>% select(subclass_label, subcla
   summarize(subclass_id = mean(subclass_id))
 group_order <- c()
 
-for (line in inh_subclasses){
-  inh_subclass_id <- inh_group[which(inh_group$subclass_label == line),'subclass_id']
+for (subclass in inh_subclasses){
+  inh_subclass_id <- inh_group[which(inh_group$subclass_label == subclass),'subclass_id']
   group_order <- append(group_order,inh_subclass_id$subclass_id[1])
 }
 
