@@ -78,12 +78,18 @@ def replace_channel_name(param_name_):
         param_name_ = 'NaT'
     elif bool(re.search('Nap', param_name_)):
         param_name_ = 'NaP'
+    elif bool(re.search('NaV', param_name_)):
+        param_name_ = 'NaV'
     elif bool(re.search('K_P', param_name_)):
         param_name_ = 'KP'
     elif bool(re.search('K_T', param_name_)):
         param_name_ = 'KT'
     elif bool(re.search('Kv3_1', param_name_)):
         param_name_ = 'Kv31'
+    elif bool(re.search('Kv2like', param_name_)):
+        param_name_ = 'Kv2'
+    elif bool(re.search('Kd', param_name_)):
+        param_name_ = 'Kd'
     elif bool(re.search('gamma', param_name_)):
         param_name_ = 'gammaCa'
     elif bool(re.search('decay', param_name_)):

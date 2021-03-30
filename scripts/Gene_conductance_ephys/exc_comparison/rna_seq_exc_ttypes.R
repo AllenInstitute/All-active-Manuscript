@@ -32,17 +32,13 @@ select_exc_counts_data[,which(names(select_exc_counts_data) != 'sample_id')] <-
             t(apply(select_exc_counts_data[,which(names(select_exc_counts_data) != 
                     'sample_id')], 1, function(x)(log2(x+1))))
 
-
+marker_genes <- c('Rspo1', 'Fezf2', 'Fam19a1')
 channel_genes <- c('Kcnc1','Kcnd1','Kcnd2','Kcnd3','Kcnab1', 'Kcnip1', 'Kcnip2', 
                         'Kcna1', 'Kcna2', 'Kcna3', 'Kcna4', 'Kcna5', 'Kcna6',
                         'Kcna7', 'Kcna10', 'Hcn1', 'Hcn2', 'Hcn3', 'Cacna1g',
                         'Scn1a', 'Scn3a', 'Scn8a')
-channel_hits <- unique(grep(paste(channel_genes,collapse="|"),
-                        unique_genes, value=TRUE))
-
-
-#ref_genes <- hits_channel[which(!hits_channel %in% hits_exc)]
-all_channel_expr_data <- select_exc_counts_data[,c('sample_id',channel_genes)]
+all_genes <- c(marker_genes, channel_genes)
+all_channel_expr_data <- select_exc_counts_data[,c('sample_id',all_genes)]
 
 # Merge with annotation data to get the Cre-line info
 all_gene_expr <- merge(exc_anno, all_channel_expr_data, by="sample_id")

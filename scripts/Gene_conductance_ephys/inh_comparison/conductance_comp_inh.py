@@ -219,7 +219,7 @@ for channel_, genes in channel_correlate_dict.items():
                                        gene_sig_grouped, 'Comp_type', inh_expr_df_, 'gene', 'cpm',
                                        ax2, plot_type='seaborn')
     ax2.ticklabel_format(style='sci', scilimits=(0, 2), axis='y')
-    ax2.set_ylabel(r'$\mathrm{log}_{2}(cpm+1)$', fontsize=axis_fontsize+2)
+    ax2.set_ylabel(r'$\mathrm{log}_{2}(cpm+1)$', fontsize=axis_fontsize + 2)
     ax2.set_xlabel(ax2.get_xlabel(), fontsize=axis_fontsize)
     plt.setp(ax2.get_xticklabels(), fontsize=tick_fontsize)
     plt.setp(ax2.get_yticklabels(), fontsize=tick_fontsize)

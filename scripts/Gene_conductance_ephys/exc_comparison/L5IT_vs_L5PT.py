@@ -45,11 +45,10 @@ hof_param_data_ttype['ttype'] = hof_param_data_ttype['me_type'].apply(
 
 
 param_pyr = hof_param_data_ttype.loc[hof_param_data_ttype.ttype.isin(
-    ['L2/3 IT', 'L5 CF', 'L5 IT'])]
+    ['L2/3 IT', 'L5 PT', 'L5 IT'])]
 
-
-ttype_cty_me = ['L5 CF', 'L5 IT']
-l5_PT = param_pyr.loc[(param_pyr.ttype == 'L5 CF') &
+exc_subclasses = ["L5 IT", "L5 PT"]
+l5_PT = param_pyr.loc[(param_pyr.ttype == 'L5 PT') &
                       (param_pyr.Dendrite_type == 'spiny'), 'Cell_id'].tolist()
 
 l5_IT = param_pyr.loc[(param_pyr.ttype == 'L5 IT') &
@@ -58,6 +57,10 @@ l5_IT = param_pyr.loc[(param_pyr.ttype == 'L5 IT') &
 filtered_me_cells = l5_PT + l5_IT
 param_pyr = param_pyr.loc[param_pyr.Cell_id.isin(filtered_me_cells), ]
 
+annotation_df = feather.read_dataframe(annotation_datapath)
+tasic_colors = annotation_df.loc[:, ['subclass_label', 'subclass_color']]
+tasic_colors = tasic_colors.drop_duplicates().set_index('subclass_label')[
+    'subclass_color'].to_dict()
 
 # %% Statistical comparison
 
@@ -77,7 +80,7 @@ select_conds = [
 ]
 
 diff_param_df = pairwise_comp(
-    param_pyr, 'ttype', ttype_cty_me, select_conds)
+    param_pyr, 'ttype', exc_subclasses, select_conds)
 
 diff_param_df['param'] = diff_param_df['param'].apply(lambda x:
                                                       man_utils.replace_channel_name(x) + '.' + x.split('.')[-1])
@@ -85,10 +88,6 @@ cond_sig_grouped = diff_param_df.groupby('param')
 
 # %% Gene expression comparison
 
-annotation_df = feather.read_dataframe(annotation_datapath)
-tasic_colors = annotation_df.loc[:, ['subclass_label', 'subclass_color']]
-tasic_colors = tasic_colors.drop_duplicates().set_index('subclass_label')[
-    'subclass_color'].to_dict()
 expression_data = pd.read_csv(expression_profile_path, index_col=0)
 expression_data = expression_data.rename(columns={'cre_label': 'Cre_line'})
 expression_data = expression_data.loc[:, (expression_data != 0).sum(
@@ -97,8 +96,8 @@ expression_data = expression_data.loc[:, (expression_data != 0).sum(
 # %% Visualize estimation statistics
 
 sns.set(font_scale=1.2)
-param_pyr_select = param_pyr.loc[:, select_conds + ['ttype']]
-param_data = pd.melt(param_pyr_select, id_vars='ttype', var_name='conductance',
+param_pyr_select = param_pyr.loc[:, select_conds + ['Cell_id', 'ttype']]
+param_data = pd.melt(param_pyr_select, id_vars=['Cell_id', 'ttype'], var_name='conductance',
                      value_name='value')
 param_data['conductance'] = param_data['conductance'].apply(lambda x:
                                                             man_utils.replace_channel_name(x) + '.' + x.split('.')[-1])
@@ -107,8 +106,7 @@ cond_types = param_data.conductance.unique().tolist()
 param_data['param_ttype'] = param_data.apply(lambda x: x.conductance + '.' +
                                              x.ttype, axis=1)
 
-palette_channel = {type_: tasic_colors[type_.split('.')[-1]] if type_.split('.')[-1] != 'L5 CF' else tasic_colors['L5 PT']
-                   for type_ in param_data.param_ttype.unique()}
+palette_channel = {type_: tasic_colors[type_.split('.')[-1]] for type_ in param_data.param_ttype.unique()}
 
 
 # %% Gene expression comparison
@@ -131,8 +129,6 @@ l5_IT_trans = expression_data.loc[(expression_data.subclass_label == 'L5 IT'),
 filtered_t_cells = l5_PT_trans + l5_IT_trans
 trans_expression = expression_data.loc[expression_data.sample_id.isin(
     filtered_t_cells), ]
-
-ttype_cty_trans = ['L5 PT', 'L5 IT']
 
 # %% Statistical comparison
 
@@ -157,7 +153,7 @@ trans_expression = trans_expression.dropna(subset=[gene_ for gene_ in list(trans
                                                    if gene_ in expressed_genes])
 
 diff_gene_df = pairwise_comp(
-    trans_expression, 'subclass_label', ttype_cty_trans, expressed_genes)
+    trans_expression, 'subclass_label', exc_subclasses, expressed_genes)
 gene_sig_grouped = diff_gene_df.groupby('param')
 
 # %% Visualize estimation statistics
@@ -185,7 +181,7 @@ for channel, genes in gene_channel_dict.items():
     idx_channel = []
     for dtype_ in channel_select:
         idx_tuple_ = ('%s.%s' %
-                      (dtype_, ttype_cty_me[0]), '%s.%s' % (dtype_, ttype_cty_me[1]))
+                      (dtype_, exc_subclasses[0]), '%s.%s' % (dtype_, exc_subclasses[1]))
         idx_channel.append(idx_tuple_)
 
     param_data_select = param_data.loc[param_data.conductance.isin(
@@ -197,7 +193,7 @@ for channel, genes in gene_channel_dict.items():
     analysis_df_channel.cliffs_delta.plot(ax=ax[0], custom_palette=palette_channel,
                                           group_summaries='median_quartiles', swarm_desat=.9)
 
-    ax[0] = man_utils.annotate_sig_level(channel_select, ttype_cty_me, 'ttype',
+    ax[0] = man_utils.annotate_sig_level(channel_select, exc_subclasses, 'ttype',
                                          cond_sig_grouped, 'Comp_type', param_data_select, 'conductance', 'value', ax[0])
 
 #    ax[0].set_title(r'-log(p-val) = %.2f' % -np.log10(cond_p_val))
@@ -208,7 +204,7 @@ for channel, genes in gene_channel_dict.items():
     idx_gene = []
     for gene in genes:
         idx_tuple_ = ('%s.%s' %
-                      (gene, ttype_cty_trans[0]), '%s.%s' % (gene, ttype_cty_trans[1]))
+                      (gene, exc_subclasses[0]), '%s.%s' % (gene, exc_subclasses[1]))
         idx_gene.append(idx_tuple_)
 
     analysis_df_gene = dabest.load(
@@ -217,7 +213,7 @@ for channel, genes in gene_channel_dict.items():
     analysis_df_gene.cliffs_delta.plot(ax=ax[1], custom_palette=palette_gene,
                                        group_summaries='median_quartiles', swarm_desat=.9,
                                        float_contrast=True)
-    ax[1] = man_utils.annotate_sig_level(genes, ttype_cty_trans, 'subclass_label',
+    ax[1] = man_utils.annotate_sig_level(genes, exc_subclasses, 'subclass_label',
                                          gene_sig_grouped, 'Comp_type', gene_expr_correlate, 'genes', 'value', ax[1])
 
     plt.show()

@@ -12,6 +12,7 @@ from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
+import feather
 
 
 def draw_heatmap(figname, dist_matrix, patch_length=40):
@@ -116,7 +117,7 @@ broad_subclass = [subclass for subclass in broad_subclass_color_dict.keys()
 hof_param_subclass = hof_param_subclass.loc[hof_param_subclass.Broad_subclass.isin(
     broad_subclass), ]
 hof_param_subclass.Broad_subclass = pd.Categorical(hof_param_subclass.Broad_subclass,
-                                                   categories=broad_subclass)  # Order according the bcre order
+                                                   categories=broad_subclass)
 hof_param_subclass = hof_param_subclass.sort_values(
     ['Broad_subclass', 'Cell_id', 'hof_index'])
 hof_param_subclass.reset_index(drop=True, inplace=True)
@@ -194,7 +195,7 @@ fig.savefig('figures/intra_inter_distbn.svg', bbox_inches='tight')
 plt.close(fig)
 
 
-# %% Plot the inhibitory block (Htr3a, Sst, Pvalb)
+# %% Plot the inhibitory block (Vip, Sst, Pvalb)
 
 
 plt_inh_dispersion = 1
