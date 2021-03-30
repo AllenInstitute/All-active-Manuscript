@@ -4,13 +4,8 @@ library(jsonlite)
 library(plotly)
 
 
-# Setting working directory -----------------------------------------------
-
-this.dir <- dirname(parent.frame(2)$ofile)
-setwd(this.dir)
-
 library(reticulate)
-use_condaenv('ateam_opt')
+use_python("~/anaconda3/bin/python")
    
 
 # Utility Functions -------------------------------------------------------
@@ -79,21 +74,35 @@ e_data <- ephys_data %>% select(ephys_fields)
 
 # Data Cleaning -----------------------------------------------------------
 
+param_data_cleaned <- best_param_data %>% select_if(~ !any(is.na(.))) %>% inner_join(bcre_cluster, 
+                                                                                     by = 'Cell_id')
 e_data_cleaned <- e_data %>% select_if(~ !any(is.na(.))) %>% inner_join(bcre_cluster, by = 'Cell_id')
 mp_data_cleaned <- mp_data %>% select_if(~ !any(is.na(.))) %>% inner_join(bcre_cluster, by = 'Cell_id')
 me_data_cleaned <- me_data %>% select_if(~ !any(is.na(.))) %>% inner_join(bcre_cluster, by = 'Cell_id')
 
 
+param_data_cleaned$bcre_colors <- unlist(lapply(param_data_cleaned$Broad_Cre_line,get_bcre_color ))
+param_data_cleaned <- param_data_cleaned %>% filter(Broad_Cre_line != 'Other')
+param_data_cleaned <- param_data_cleaned %>% mutate_at(vars(-c("Cell_id",
+                     "Broad_Cre_line", "bcre_colors")), ~(scale(.) %>% as.vector))
+param_data_cleaned <- param_data_cleaned %>% remove_rownames %>% column_to_rownames(var="Cell_id")
+
+
 e_data_cleaned$bcre_colors <- unlist(lapply(e_data_cleaned$Broad_Cre_line,get_bcre_color ))
 e_data_cleaned <- e_data_cleaned %>% filter(Broad_Cre_line != 'Other')
+e_data_cleaned <- e_data_cleaned %>% mutate_at(vars(-c("Cell_id","Broad_Cre_line", "bcre_colors")), ~(scale(.) %>% as.vector))
 e_data_cleaned <- e_data_cleaned %>% remove_rownames %>% column_to_rownames(var="Cell_id")
+
 
 me_data_cleaned$bcre_colors <- unlist(lapply(me_data_cleaned$Broad_Cre_line,get_bcre_color ))
 me_data_cleaned <- me_data_cleaned %>% filter(Broad_Cre_line != 'Other')
+me_data_cleaned <- me_data_cleaned %>% mutate_at(vars(-c("Cell_id", "Broad_Cre_line", "bcre_colors")), ~(scale(.) %>% as.vector))
 me_data_cleaned <- me_data_cleaned %>% remove_rownames %>% column_to_rownames(var="Cell_id")
+
 
 mp_data_cleaned$bcre_colors <- unlist(lapply(mp_data_cleaned$Broad_Cre_line,get_bcre_color ))
 mp_data_cleaned <- mp_data_cleaned %>% filter(Broad_Cre_line != 'Other')
+mp_data_cleaned <- mp_data_cleaned %>% mutate_at(vars(-c("Cell_id", "Broad_Cre_line", "bcre_colors")), ~(scale(.) %>% as.vector))
 mp_data_cleaned <- mp_data_cleaned %>% remove_rownames %>% column_to_rownames(var="Cell_id")
 
 
@@ -155,6 +164,26 @@ legend("topleft", legend = bcre_index_order, pch = 15, pt.cex =2, cex =1, bty = 
                bcre_color_list$Pyr))
 
 
+# Model parameters  ------------------------------------------------
+
+d_param_colors <- param_data_cleaned$bcre_colors
+d_param <- param_data_cleaned %>% select(-c(Broad_Cre_line,bcre_colors)) %>%
+  dist() %>% hclust( method="ward.D" ) %>% as.dendrogram()
+d_param <- d_param %>% 
+  # collapse_branch(tol=500) %>%
+  ladderize %>% 
+  #set("labels", "")
+  set('labels_cex', c(1,rep(.01,10))) 
+par(mar=c(7,5,12,0))
+plot(d_param,main='Model Parameters',axes=FALSE)
+colored_bars(colors = d_param_colors, dend = d_param, rowLabels = "Broad Cre-line")
+legend("center", legend = bcre_index_order, pch = 15, pt.cex =2, cex =2, bty = 'n',
+       title = "Broad Cre-line", 
+       col = c(bcre_color_list$Htr3a,bcre_color_list$Sst,bcre_color_list$Pvalb,
+               bcre_color_list$Pyr))
+
+
+
 # Tanglegram --------------------------------------------------------------
 
 # Custom these dendrograms and place them in a list
@@ -169,4 +198,20 @@ dl %>%  tanglegram(highlight_distinct_edges = FALSE, # Turn-off dashed lines
            main_left = 'Morph + Ephys',
            main_right = 'Morph + Parameters',
            margin_inner=8,cex_main = 1.5)
+
+
+
+# Tanglegram between ME and Model parameters
+dme_p <- dendlist(d3,d_param)
+
+# Plot them together
+tanglegram(dme_p, highlight_distinct_edges = FALSE, # Turn-off dashed lines
+                   common_subtrees_color_branches = FALSE, # Color common branches
+                   common_subtrees_color_lines = FALSE,
+                   highlight_branches_lwd = FALSE,
+                   lwd = .8,
+                   # main_left = 'Ephys',
+                   main_left = 'Morph + Ephys',
+                   main_right = 'Model Parameters',
+                   margin_inner=6,cex_main = 1.5)
 

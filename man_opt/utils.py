@@ -5,6 +5,12 @@ import re
 import requests
 
 
+# transcriptomic subclasses for ME data (Gouwens 2019 Nature Neuro)
+exc_subclasses = ['L2/3 IT', 'L4', 'L5 IT',
+                  'L5 PT', 'NP', 'L6 IT', 'L6 CT', 'L6b']
+inh_subclasses = ['Vip', 'Sst', 'Pvalb']
+
+
 def read_csv_with_dtype(data_filename, datatype_filename):
     datatypes = pd.read_csv(datatype_filename)['types']
     data = pd.read_csv(data_filename, dtype=datatypes.to_dict())
@@ -72,12 +78,18 @@ def replace_channel_name(param_name_):
         param_name_ = 'NaT'
     elif bool(re.search('Nap', param_name_)):
         param_name_ = 'NaP'
+    elif bool(re.search('NaV', param_name_)):
+        param_name_ = 'NaV'
     elif bool(re.search('K_P', param_name_)):
         param_name_ = 'KP'
     elif bool(re.search('K_T', param_name_)):
         param_name_ = 'KT'
     elif bool(re.search('Kv3_1', param_name_)):
         param_name_ = 'Kv31'
+    elif bool(re.search('Kv2like', param_name_)):
+        param_name_ = 'Kv2'
+    elif bool(re.search('Kd', param_name_)):
+        param_name_ = 'Kd'
     elif bool(re.search('gamma', param_name_)):
         param_name_ = 'gammaCa'
     elif bool(re.search('decay', param_name_)):
@@ -209,3 +221,17 @@ def getModel(cell_id, **kwargs):
     with open(model_filename, 'wb') as json_file:
         json_file.write(model_params.content)
     return model_filename
+
+
+def add_transcriptomic_subclass(data, me_ttype_map_path):
+    me_ttype_map = utility.load_pickle(me_ttype_map_path)
+    me_ttype_map['Other'] = 'Other'
+    data['me_type'] = data['me_type'].fillna('Other')
+    data['ttype'] = data['me_type'].apply(lambda x: me_ttype_map[x])
+    return data
+
+
+def add_broad_subclass(data):
+    data['Broad_subclass'] = data['ttype'].apply(lambda x: 'Pyr' if x in exc_subclasses
+                                                 else(x if x in inh_subclasses else 'Other'))
+    return data

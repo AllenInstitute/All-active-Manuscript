@@ -134,13 +134,15 @@ labels = []
 for label in raw_xticklabels:
     txt=label.get_text()
     type_ = txt.split('-')[0]
+    cre_ = 'L4 IT' if type_.split('.')[-1] == 'Nr5a1' else 'L5 PT'
     num_ = txt.split('\n')[-1]
     if 'Modeled_Exp' in type_:
         type_ = type_.replace('Modeled_Exp', 'Exp $\cap$ Model')
-    labels.append('%s\n%s\n%s'%(type_.split('.')[0],type_.split('.')[-1],num_))
+    labels.append('%s\n%s\n%s' %
+                  (type_.split('.')[0], cre_, num_))
 rawdata_axes.set_xticklabels(labels)
 
-effsize_axes.set_xticklabels(['','Rbp4-Nr5a1']*len(data_types))
+effsize_axes.set_xticklabels(['','L5 PT-L4 IT']*len(data_types))
 rawdata_axes.set_ylabel('sag_ratio @%s$pA$'%current_amp)
 f.set_size_inches(8,6)
 
