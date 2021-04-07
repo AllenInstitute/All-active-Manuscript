@@ -199,10 +199,6 @@ def getModel(cell_id, **kwargs):
     """
     api_url = "http://api.brain-map.org"
     query_url = api_url + "/api/v2/data/query.json"
-
-    # payload_all = {"criteria": "model::Specimen,rma::criteria,well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'""",
-    #                "num_rows": 1000}
-
     payload_specific = {"criteria": "model::Specimen,rma::criteria,[id$eq%d]" % cell_id,
                         "include": "well_known_files(well_known_file_type[name$eq%s])" % """'UpdatedBiophysicalModelParameters'"""}
 
