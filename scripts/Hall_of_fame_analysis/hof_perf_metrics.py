@@ -191,5 +191,3 @@ ax[0].set_ylabel('Generalization error (z-score)', labelpad=15,
 fig.tight_layout()
 fig.savefig('figures/Gen_err_comp_cty.pdf', bbox_inches='tight')
 plt.close(fig)
-
-# %%
